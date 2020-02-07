@@ -1,0 +1,279 @@
+---
+output: html_document
+params:
+  date: !r Sys.Date()
+  set_title: "BrainSeq QC report"
+  set_author: "Nurlan Kerimov"
+  sample_meta_path: "/home/kerimov/work/SampleArcheology/studies/cleaned/BrainSeq.tsv"
+  count_matrix_path: "/home/kerimov/work/feature_counts_QC/data/counts/BrainSeq/merged_gene_counts.txt"
+  mbv_files_dir: "/home/kerimov/work/feature_counts_QC/data/counts/BrainSeq/MBV/"
+  projections: "/home/kerimov/work/feature_counts_QC/data/popAssign/results_BrainSeq/new_dataset_scores.profile.adj"
+  pca_table: "/home/kerimov/work/feature_counts_QC/data/popAssign/results_BrainSeq/main_overlapped_pca.vect"
+  phenotype_meta_path: "/home/kerimov/work/feature_counts_QC/data/annotations/gene_counts_Ensembl_96_phenotype_metadata.tsv.gz"
+  source_populations_file: "/home/kerimov/work/feature_counts_QC/data/popAssign/igsr_samples.tsv"
+  use_plotly: FALSE
+---
+
+---
+title: `r params$set_title`
+author: `r params$set_author`
+---
+
+- [PCA of gene expression data](#pca-of-gene-expression-data)
+- [MDS of gene expression data](#mds-of-gene-expression-data)
+- [Expression of sex-specific genes](#expression-of-sex-specific-genes)
+- [Assign genotyped individuals to populations](#assign-genotyped-individuals-to-populations)
+- [Concordance between expression and genotype data](#concordance-between-expression-and-genotype-data)
+
+***
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height = 6, fig.width = 10, fig.align = "center")
+```
+
+```{r load_libraries_and_inputs, echo=FALSE, results="hide", include=FALSE}
+suppressPackageStartupMessages(library("readr"))
+suppressPackageStartupMessages(library("dplyr"))
+suppressPackageStartupMessages(library("devtools"))
+suppressPackageStartupMessages(library("tidyr"))
+suppressPackageStartupMessages(library("ggplot2"))
+suppressPackageStartupMessages(library("SummarizedExperiment"))
+suppressPackageStartupMessages(library("data.table"))
+suppressPackageStartupMessages(library("plotly"))
+suppressPackageStartupMessages(library("knitr"))
+suppressPackageStartupMessages(library("gridExtra"))
+suppressPackageStartupMessages(library("grid"))
+
+sample_meta_path <- params$sample_meta_path
+count_matrix_path <- params$count_matrix_path
+mbv_files_dir <- params$mbv_files_dir
+projections <- params$projections
+pca_table <- params$pca_table
+use_plotly <- params$use_plotly
+
+phenotype_meta_path <- params$phenotype_meta_path
+source_populations_file <- params$source_populations_file
+# devtools::load_all(params$eqtl_utils_path)
+```
+
+```{r read_data, echo=FALSE}
+# Read the inputs
+sample_metadata <- utils::read.csv(sample_meta_path, sep = '\t', stringsAsFactors = FALSE)
+phenotype_meta = readr::read_delim(phenotype_meta_path, delim = "\t", col_types = "ccccciiicciidi")
+data_fc <- utils::read.csv(count_matrix_path, sep = '\t', check.names = FALSE)
+se <- eQTLUtils::makeSummarizedExperimentFromCountMatrix(assay = data_fc, row_data = phenotype_meta, col_data = sample_metadata)
+
+message("Number of samples in study before quality control: ", sample_metadata %>% nrow())
+message("Number of samples in study after quality control: ", sample_metadata[sample_metadata$rna_qc_passed & sample_metadata$genotype_qc_passed,] %>% nrow())
+```
+
+```{r create_and_filter_SE, echo=FALSE, include=FALSE}
+se <- eQTLUtils::filterSummarizedExperiment(se, filter_rna_qc = TRUE, filter_genotype_qc = TRUE)
+study_name <- sample_metadata$study[1]
+se
+```
+### PCA of gene expression data
+
+Performs principal component analysis (PCA) of gene expression data
+
+* Applies transcripts per million (TPM) normalisation
+
+* Genes with median expression below 1 TPM are filtered out
+
+* log2(matrix + 0.1) is applied
+
+```{r pca_res, echo=FALSE}
+valid_gene_types = c("lincRNA","protein_coding","IG_C_gene","IG_D_gene","IG_J_gene",
+                       "IG_V_gene", "TR_C_gene","TR_D_gene","TR_J_gene", "TR_V_gene",
+                       "3prime_overlapping_ncrna","known_ncrna", "processed_transcript",
+                       "antisense","sense_intronic","sense_overlapping")
+valid_chromosomes = c("1","10","11","12","13","14","15","16","17","18","19",
+                      "2","20","21","22","3","4","5","6","7","8","9")
+
+# choose only valid gene types, valid chromosomes and TPM normalise
+processed_se = eQTLUtils::filterSummarizedExperiment(se,
+                                                     valid_chromosomes = valid_chromosomes,
+                                                     valid_gene_types = valid_gene_types) %>% eQTLUtils::normaliseSE_tpm()
+processed_se = processed_se[apply(SummarizedExperiment::assays(processed_se)$tpms, 1, median) > 1, ]
+
+message("Number of genes with [median(tpm) > 1]: ", processed_se %>% nrow())
+```
+
+```{r transform_se, echo=FALSE}
+n_pcs = 10
+if (ncol(processed_se) < 10)
+  { n_pcs = ncol(processed_se) }
+
+#Perform PCA
+pca_res = eQTLUtils::transformSE_PCA(processed_se, assay_name = "tpms", n_pcs = n_pcs, log_transform = TRUE, center = TRUE, scale. = TRUE)
+
+PCA.plot <- ggplot2::ggplot(pca_res$pca_matrix, ggplot2::aes(x = PC1, y = PC2, color = qtl_group, label = sample_id)) +
+    ggplot2::geom_point() +
+    ggplot2::scale_shape_manual(values=c(20,17,18,11,14,25,8,seq(0,7))) +
+    ggplot2::labs(x=paste0("PC 1 - (", round(pca_res$var_exp[1]*100, digits = 1),"% var. explained)"),
+                  y=paste0("PC 2 - (", round(pca_res$var_exp[2]*100, digits = 1),"% var. explained)"),
+                  title = paste0(study_name, " PCA - TPM normalized, log2 | Sample Size: ", nrow(processed_se %>% SummarizedExperiment::colData()))) +
+    ggplot2::theme(plot.title =  ggplot2::element_text(size = 12, face="italic")) +
+    ggplot2::theme_bw()
+
+if (use_plotly) {
+  plotly::ggplotly(PCA.plot, width=1000)
+} else {
+  PCA.plot
+}
+```
+
+### MDS of gene expression data
+
+Performs Multi-dimensional scaling (MDS) of gene expression data using isoMDS() R function.
+
+* Applies transcripts per million (TPM) normalisation
+
+* Genes with median expression below 1 TPM are filtered out
+
+* log2(matrix + 0.1) is applied
+
+* dist = cor(matrix, method = "pearson")
+
+* Data are scaled to k = 2 dimensions with isoMDS(1-dist, k=2)
+
+```{r mds, results="hide", warning=FALSE, echo=FALSE, collapse=TRUE}
+#Perform MDS
+
+message("Number of genes with [median(tpm) > 1]: ", processed_se %>% nrow())
+
+matrix = log(SummarizedExperiment::assays(processed_se)$tpms+0.1,2)
+dist = cor(matrix, method = "pearson")
+fit <- MASS::isoMDS(1-dist, k=2)
+
+mds_matrix = SummarizedExperiment::as.data.frame(fit$points) %>%
+  as_tibble() %>% dplyr::mutate(sample_id = rownames(fit$points)) %>%
+  dplyr::left_join(SummarizedExperiment::as.data.frame(SummarizedExperiment::colData(processed_se)), by = "sample_id")
+
+mds_plot = ggplot2::ggplot(mds_matrix, ggplot2::aes(x = V1, y = V2, color = qtl_group, label = sample_id)) +
+    ggplot2::geom_point() +
+    ggplot2::scale_shape_manual(values=c(20,17,18,11,14,25,8,seq(0,7))) +
+    ggplot2::labs(x="MDS Coordinate 1", y="MDS Coordinate 2",
+      title = paste0(study_name, " MDS - TPM normalized, log2 | Sample Size: ", nrow(processed_se %>% SummarizedExperiment::colData()))) +
+    ggplot2::theme(plot.title = element_text(size = 12, face="italic")) +
+    ggplot2::theme_bw()
+```
+
+```{r mds_plot, echo=FALSE}
+if (use_plotly) {
+  plotly::ggplotly(mds_plot, width=1000)
+} else {
+  mds_plot
+}
+```
+
+### Expression of sex-specific genes
+
+Compares the expression of genes on the Y chromosome against the expression of XIST on the X chromosome to check if genetic sex has been correctly described in sample metadata. Inspired by the analysis peformed in ['t Hoen et al, 2013](https://doi.org/10.1038/nbt.2702).
+
+* Values on the scatter plot are log2(tpm+1).
+
+```{r sex_specific, echo=FALSE}
+sex_qc_df <- eQTLUtils::calculateSexQCDataFrame(se)
+if (all(is.na(sex_qc_df$sex))) { sex_qc_df$sex <- "NA"}
+
+Sex_QC_plot <- ggplot2::ggplot(sex_qc_df,
+      ggplot2::aes(x=(ENSG00000229807+1) %>% log2(), y=(Y_chrom_mean+1) %>% log2(), label = sample_id)) +
+      ggplot2::geom_point(ggplot2::aes(col=sex)) +
+      ggplot2::labs(x="Expression of XIST", y="Mean expression of genes on chrY", title = paste0(study_name, " DS - TPM normalized, log2 | Sample Size: ", nrow(sex_qc_df))) +
+      ggplot2::theme(plot.title = element_text(size = 12, face="italic")) +
+      ggplot2::theme_bw()
+
+if (use_plotly) {
+  plotly::ggplotly(Sex_QC_plot, width=1000)
+} else {
+  Sex_QC_plot
+}
+```
+
+### Assign genotyped individuals to populations
+
+Project genotyped individuals to the first two principal components of the 1000 Genomes Phase 3 reference panel.
+
+```{r popAssign, echo=FALSE}
+pca <- read.table(pca_table, header = FALSE, )
+pca <- pca %>% select(-c(2)) %>% rename(genotype_id=V1, PC1=V3, PC2=V4, PC3=V5)
+
+source_populations <- read.table(source_populations_file, header = TRUE, sep='\t')
+main_pca <- merge(pca, select(source_populations, genotype_id, superpopulation_code), by  = "genotype_id") 
+
+projections_pcs <- read.table(projections, header = TRUE)
+projections_pcs <- projections_pcs %>% select(-c(2,3,4)) %>% 
+  rename(genotype_id=ID1, PC1=Adjusted1, PC2=Adjusted2, PC3=Adjusted3) %>% 
+  mutate(superpopulation_code = study_name)
+
+comb_pcs = rbind(main_pca, projections_pcs)
+projected_plot <- ggplot(comb_pcs, aes(x=PC1, y=PC2, color=superpopulation_code)) + geom_point() + 
+  guides(color = guide_legend(title='Superpopulation')) + ggtitle(study_name) +
+  ggplot2::theme_bw()
+
+message("Number of genotyped individuals in the current study ", study_name, ": ", projections_pcs %>% nrow())
+message("Number of genotyped individuals in the reference panel: ", main_pca %>% nrow())
+
+if (use_plotly) {
+  plotly::ggplotly(projected_plot)
+} else {
+  projected_plot
+}
+```
+
+
+### Concordance between expression and genotype data
+
+Uses [QTLtools mbv](https://doi.org/10.1093/bioinformatics/btx074) (Match BAM to VCF) tool to check concordance between genotype data and genetic variants detected from the RNA-seq data. 
+
+```{r mbv, echo=FALSE}
+mbv_results = eQTLUtils::mbvImportData(mbv_dir = mbv_files_dir, suffix = ".mbv_output.txt")
+best_matches = purrr::map_df(mbv_results, eQTLUtils::mbvFindBestMatch, .id = "sample_id") %>% dplyr::arrange(distance)
+mbv_meta = SummarizedExperiment::colData(se) %>% as.data.frame() %>% dplyr::as_tibble() %>% dplyr::select(sample_id, genotype_id)
+best_matches <- dplyr::left_join(mbv_meta, best_matches, by = "sample_id")
+best_matches$is_correct_match <- best_matches$mbv_genotype_id == best_matches$genotype_id
+best_matches <- best_matches %>% dplyr::arrange(distance) %>% as.data.frame()
+message("Number of non-matching genotypes: ", which(!best_matches$is_correct_match) %>% length())
+message("Number of matching genotypes: ", which(best_matches$is_correct_match) %>% length())
+```
+
+```{r plot_mbv_con_hist, echo=FALSE, message=FALSE, warning=FALSE}
+p1 <- ggplot(best_matches, aes(x=het_consistent_frac)) +
+  geom_histogram(color="darkblue", fill="lightblue", bins = 40) +
+  geom_vline(aes(xintercept=mean(het_consistent_frac)),
+            color="orange", linetype="dashed", size=1) + 
+  labs(x="Fraction of concordant heterozygous sites", y = "Count") +
+  ggplot2::theme_bw()
+
+
+p2 <- ggplot(best_matches, aes(x=hom_consistent_frac)) +
+  geom_histogram(color="darkblue", fill="lightblue") +
+  geom_vline(aes(xintercept=mean(hom_consistent_frac, bins = 40)),
+            color="orange", linetype="dashed", size=1)+ 
+  labs(x="Fraction of concordant homozygous sites", y = "Count") +
+  ggplot2::theme_bw()
+
+grid <- grid.arrange(p1, p2, ncol = 2, top="Histogram of concordant heterozygous/homozygous sites")
+```
+
+***
+
+
+```{r plot_mbv_dist_hist, echo=FALSE, message=FALSE, warning=FALSE}
+p1 <- ggplot(best_matches, aes(x=het_min_dist)) +
+  geom_histogram(color="darkblue", fill="lightblue", bins = 40) +
+  geom_vline(aes(xintercept=mean(het_min_dist)),
+            color="orange", linetype="dashed", size=1) + 
+  labs(x="Minimal distance to the second best match \n(heterozygous sites)", y = "Count") +
+  ggplot2::theme_bw()
+
+
+p2 <- ggplot(best_matches, aes(x=hom_min_dist)) +
+  geom_histogram(color="darkblue", fill="lightblue") +
+  geom_vline(aes(xintercept=mean(hom_min_dist, bins = 40)),
+            color="orange", linetype="dashed", size=1)+ 
+  labs(x="Minimal distance to the second best match \n(homozygous sites)", y = "Count") +
+  ggplot2::theme_bw()
+
+grid <- grid.arrange(p1, p2, ncol = 2, top="Histogram of distances to the second best match")
+```

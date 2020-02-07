@@ -198,23 +198,38 @@ process get_software_versions {
 /*
  * STEP 1 - FastQC
  */
-process fastqc {
+process qc_report {
     tag "$name"
     label 'process_medium'
-    publishDir "${params.outdir}/fastqc", mode: 'copy',
+    publishDir "${params.outdir}/QC", mode: 'copy',
         saveAs: { filename ->
                       filename.indexOf(".zip") > 0 ? "zips/$filename" : "$filename"
                 }
 
     input:
-    set val(name), file(reads) from ch_read_files_fastqc
+    file sample_meta from qc_report_sample_meta
+    set file(ge_exp_matrix), mbv_files_path from qc_report_ch_exp_matrix
+    set sample, file(reads) from ch_read_files_fastqc
 
     output:
-    file "*_fastqc.{zip,html}" into ch_fastqc_results
+    file "${params.study_name}_QC_report.html"
 
     script:
     """
-    fastqc --quiet --threads $task.cpus $reads
+    #!/usr/bin/env Rscript
+
+    rmarkdown::render(
+    input = $baseDir/bin/QC/rnaseq_study_QC_report.Rmd, 
+    output_file = ${params.study_name}_QC_report.html,
+    params = list(
+        set_title = ${params.study_name}_QC_report, 
+        sample_meta_path = $sample_meta,
+        count_matrix_path = $ge_exp_matrix
+        phenotype_meta_path = ${params.ge_pheno_meta_path},
+        mbv_files_dir = $mbv_files_path,
+        projections = "/gpfs/hpc/home/kerimov/Genome_QC_Dev/results_Alasoo_2018/new_dataset_scores.profile.adj",
+        pca_table = "/gpfs/hpc/home/kerimov/Genome_QC_Dev/results_Alasoo_2018/main_overlapped_pca.vect",
+        source_populations_file = "/gpfs/hpc/home/kerimov/1000G_genome/source_data/igsr_samples.tsv"))
     """
 }
 
