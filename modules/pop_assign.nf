@@ -19,56 +19,52 @@ Channel
     .ifEmpty { exit 1, "Populations metadata file not found: ${params.populations_file}" } 
     .set { populations_file_ch }
 
-// if(params.exclude_population){
-//     Channel
-//         .fromPath(params.ids_to_remove_file)
-//         .ifEmpty { exit 1, "Populations metadata file not found: ${params.ids_to_remove_file}" } 
-//         .set { ids_to_remove_file_ch }
-// }
+if(params.exclude_population){
+    Channel
+        .fromPath(params.ids_to_remove_file)
+        .ifEmpty { exit 1, "Populations metadata file not found: ${params.ids_to_remove_file}" } 
+        .set { ids_to_remove_file_ch }
+}
     
 workflow pop_assign {
-    // get:
-    // ref_genome_ch
-    // vcf_file_ch
-    // populations_file_ch
-
-    // main:
     refVCFtoBED(ref_genome_ch)
     refBedNoDubl = params.exclude_population ? 
         removeFamilyFromRef(refVCFtoBED.out, ids_to_remove_file_ch) : 
         removeDublFromRef(refVCFtoBED.out)
 
     getSNPsFromRef(refBedNoDubl)
-     //getSNPsFromRef.out.ref_snps_list
+    // getSNPsFromRef.out.ref_snps_list
 
-    sampleVCftoBED(vcf_file_ch) 
+    sampleVCftoBED(vcf_file_ch)
+    // sampleVCftoBED.out.sample_bed, 
+    // sampleVCftoBED.out.relatedness_sample_list 
 
-    calculate_relatedness_matrix(sampleVCftoBED.out.sample_bed, sampleVCftoBED.out.relatedness_sample_list)
-    // calculate_relatedness_matrix.out
+    calculateRelatednessMatrix(sampleVCftoBED.out.sample_bed, sampleVCftoBED.out.relatedness_sample_list)
+    // calculateRelatednessMatrix.out
     
-    // extractSharedSNPsFromSampleGen(sampleVCftoBED.out.sample_bed, 
-    //     getSNPsFromRef.out.ref_snps_list)
-    // // extractSharedSNPsFromSampleGen.out.sample_gen_overlapped
-    // // extractSharedSNPsFromSampleGen.out.sample_gen_overlapped_snplist
+    extractSharedSNPsFromSampleGen(sampleVCftoBED.out.sample_bed, 
+        getSNPsFromRef.out.ref_snps_list)
+    // extractSharedSNPsFromSampleGen.out.sample_gen_overlapped
+    // extractSharedSNPsFromSampleGen.out.sample_gen_overlapped_snplist
     
-    // extractSharedSNPsFromRefGen(refBedNoDubl,
-    //     extractSharedSNPsFromSampleGen.out.sample_gen_overlapped_snplist)
-    // // extractSharedSNPsFromRefGen.out.ref_overlapped
+    extractSharedSNPsFromRefGen(refBedNoDubl,
+        extractSharedSNPsFromSampleGen.out.sample_gen_overlapped_snplist)
+    // extractSharedSNPsFromRefGen.out.ref_overlapped
     
-    // calcKinsMatrices(extractSharedSNPsFromRefGen.out.ref_overlapped)
-    // // calcKinsMatrices.out.ref_overlapped_kins
+    calcKinsMatrices(extractSharedSNPsFromRefGen.out.ref_overlapped)
+    // calcKinsMatrices.out.ref_overlapped_kins
     
-    // calcRefPcaAndLoads(calcKinsMatrices.out.ref_overlapped_kins,
-    //     extractSharedSNPsFromRefGen.out.ref_overlapped)
-    // //calcRefPcaAndLoads.out.ref_overlapped_loads
-    // //calcRefPcaAndLoads.out.ref_overlapped_pca
+    calcRefPcaAndLoads(calcKinsMatrices.out.ref_overlapped_kins,
+        extractSharedSNPsFromRefGen.out.ref_overlapped)
+    // calcRefPcaAndLoads.out.ref_overlapped_loads
+    // calcRefPcaAndLoads.out.ref_overlapped_pca
 
-    // mapSampleGenToRef(extractSharedSNPsFromSampleGen.out.sample_gen_overlapped,
-    //     calcRefPcaAndLoads.out.ref_overlapped_loads)
-    // // mapSampleGenToRef.out.sample_gen_scores
-    // plot_pca(mapSampleGenToRef.out.sample_gen_scores,
-    //          calcRefPcaAndLoads.out.ref_overlapped_pca,
-    //          populations_file_ch)
+    mapSampleGenToRef(extractSharedSNPsFromSampleGen.out.sample_gen_overlapped,
+        calcRefPcaAndLoads.out.ref_overlapped_loads)
+    // mapSampleGenToRef.out.sample_gen_scores
+    plotPCA(mapSampleGenToRef.out.sample_gen_scores,
+             calcRefPcaAndLoads.out.ref_overlapped_pca,
+             populations_file_ch)
 }
 
 process refVCFtoBED{
@@ -78,7 +74,7 @@ process refVCFtoBED{
     path "ref.vcf.gz"
 
     output:
-    tuple file('ref.bed'), file('ref.bim'), file('ref.fam')
+    tuple path('ref.bed'), path('ref.bim'), path('ref.fam')
 
     script:
     """
@@ -94,11 +90,11 @@ process removeFamilyFromRef{
     storeDir "$baseDir/reference_vcf_cache/"
 
     input:
-    tuple file('ref.bed'), file('ref.bim'), file('ref.fam')
+    tuple path('ref.bed'), path('ref.bim'), path('ref.fam')
     path 'ids_to_remove.txt' 
 
     output:
-    tuple file('ref_no_dubl.bed'), file('ref_no_dubl.bim'), file('ref_no_dubl.fam')
+    tuple path('ref_no_dubl.bed'), path('ref_no_dubl.bim'), path('ref_no_dubl.fam')
 
     script:
     """
@@ -116,10 +112,10 @@ process removeDublFromRef{
     storeDir "$baseDir/reference_vcf_cache/"
 
     input:
-    tuple file('ref.bed'), file('ref.bim'), file('ref.fam')
+    tuple path('ref.bed'), path('ref.bim'), path('ref.fam')
   
     output:
-    tuple file('ref_no_dubl.bed'), file('ref_no_dubl.bim'), file('ref_no_dubl.fam')
+    tuple path('ref_no_dubl.bed'), path('ref_no_dubl.bim'), path('ref_no_dubl.fam')
 
     script:
     """
@@ -135,7 +131,7 @@ process getSNPsFromRef{
     storeDir "$baseDir/reference_vcf_cache/"
 
     input: 
-    tuple file('ref_no_dubl.bed'), file('ref_no_dubl.bim'), file('ref_no_dubl.fam')
+    tuple path('ref_no_dubl.bed'), path('ref_no_dubl.bim'), path('ref_no_dubl.fam')
 
     output:
     path 'ref_snps_list.snplist', emit: ref_snps_list
@@ -148,13 +144,13 @@ process getSNPsFromRef{
 
 // convert vcf file to plink binary file (.bed)
 process sampleVCftoBED{
-    publishDir "${params.outdir}", mode: 'copy'
+    publishDir "${params.outdir}/pop_assign", mode: 'copy'
     
     input:
-    file 'sample.vcf.gz'
+    path 'sample.vcf.gz'
 
     output:
-    tuple file('sample_genotype.bed'), file('sample_genotype.bim'), file('sample_genotype.fam'), emit: sample_bed
+    tuple path('sample_genotype.bed'), path('sample_genotype.bim'), path('sample_genotype.fam'), emit: sample_bed
     path 'sample_list.txt', emit: relatedness_sample_list
 
     script:
@@ -169,11 +165,11 @@ process sampleVCftoBED{
     """
 }
 
-process calculate_relatedness_matrix{
-    publishDir "${params.outdir}", mode: 'copy'
+process calculateRelatednessMatrix{
+    publishDir "${params.outdir}/pop_assign", mode: 'copy'
 
     input:
-    tuple file('sample_genotype.bed'), file('sample_genotype.bim'), file('sample_genotype.fam')
+    tuple path('sample_genotype.bed'), path('sample_genotype.bim'), path('sample_genotype.fam')
     path 'sample_list.txt'
 
     output:
@@ -201,104 +197,100 @@ process calculate_relatedness_matrix{
     """
 }
 
-// process extractSharedSNPsFromSampleGen{
-//     input:
-//     set file ('sample_genotype.bed'), file('sample_genotype.bim'), file('sample_genotype.fam')
-//     file 'ref_snps_list.snplist'
+process extractSharedSNPsFromSampleGen{
+    input:
+    tuple path ('sample_genotype.bed'), path('sample_genotype.bim'), path('sample_genotype.fam')
+    path 'ref_snps_list.snplist'
 
-//     output:
-//     set file('sample_gen_overlapped.bed'), file('sample_gen_overlapped.bim'), file('sample_gen_overlapped.fam'), emit: sample_gen_overlapped
-//     file 'overlapped_snps.snplist', emit: sample_gen_overlapped_snplist
+    output:
+    tuple path('sample_gen_overlapped.bed'), path('sample_gen_overlapped.bim'), path('sample_gen_overlapped.fam'), emit: sample_gen_overlapped
+    path 'overlapped_snps.snplist', emit: sample_gen_overlapped_snplist
 
-//     // extract snps present in pruned data from new dataset
-//     // --make-bed makes sure bfiles created!
-//     script:
-//     """
-//     plink2 --bfile sample_genotype --extract ref_snps_list.snplist --make-bed --out sample_gen_overlapped
-//     plink2 --bfile sample_gen_overlapped --write-snplist --out overlapped_snps
-//     """
-// }
+    // extract snps present in pruned data from new dataset
+    // --make-bed makes sure bfiles created!
+    script:
+    """
+    plink2 --bfile sample_genotype --extract ref_snps_list.snplist --make-bed --out sample_gen_overlapped
+    plink2 --bfile sample_gen_overlapped --write-snplist --out overlapped_snps
+    """
+}
 
-// process extractSharedSNPsFromRefGen {
-//     input:
-//     set file('ref.bed'), file('ref.bim'), file('ref.fam')
-//     file 'overlapped_snps.snplist'
+process extractSharedSNPsFromRefGen {
+    input:
+    tuple path('ref.bed'), path('ref.bim'), path('ref.fam')
+    path 'overlapped_snps.snplist'
 
-//     output:
-//     set file('ref_overlapped.bed'), file('ref_overlapped.bim'), file('ref_overlapped.fam'), emit: ref_overlapped
+    output:
+    tuple path('ref_overlapped.bed'), path('ref_overlapped.bim'), path('ref_overlapped.fam'), emit: ref_overlapped
 
-//     script:
-//     """
-//     plink2 --bfile ref --extract overlapped_snps.snplist --make-bed --out ref_overlapped
-//     """
-// }
+    script:
+    """
+    plink2 --bfile ref --extract overlapped_snps.snplist --make-bed --out ref_overlapped
+    """
+}
 
-// process calcKinsMatrices{
-//     input:
-//     set file('ref_overlapped.bed'), file('ref_overlapped.bim'), file('ref_overlapped.fam')
+process calcKinsMatrices{
+    input:
+    tuple path('ref_overlapped.bed'), path('ref_overlapped.bim'), path('ref_overlapped.fam')
 
-//     output:
-//     set file("ref_overlapped_kins.grm.bin"), file("ref_overlapped_kins.grm.id"), file("ref_overlapped_kins.grm.adjust"), file("ref_overlapped_kins.grm.details"), emit: ref_overlapped_kins
+    output:
+    tuple path("ref_overlapped_kins.grm.bin"), path("ref_overlapped_kins.grm.id"), path("ref_overlapped_kins.grm.adjust"), path("ref_overlapped_kins.grm.details"), emit: ref_overlapped_kins
     
-//     script:
-//     """
-//     ldak --calc-kins-direct ref_overlapped_kins --bfile ref_overlapped --ignore-weights YES --power -0.25
-//     """
-// }
+    script:
+    """
+    ldak --calc-kins-direct ref_overlapped_kins --bfile ref_overlapped --ignore-weights YES --power -0.25
+    """
+}
 
-// process calcRefPcaAndLoads{
-//     publishDir "${params.outdir}", mode: 'copy'
+process calcRefPcaAndLoads{
+    publishDir "${params.outdir}/pop_assign", mode: 'copy'
 
-//     input:
-//     set file("ref_overlapped_kins.grm.bin"), file("ref_overlapped_kins.grm.id"), file("ref_overlapped_kins.grm.adjust"), file("ref_overlapped_kins.grm.details")
-//     set file('ref_overlapped.bed'), file('ref_overlapped.bim'), file('ref_overlapped.fam')
+    input:
+    tuple path("ref_overlapped_kins.grm.bin"), path("ref_overlapped_kins.grm.id"), path("ref_overlapped_kins.grm.adjust"), path("ref_overlapped_kins.grm.details")
+    tuple path('ref_overlapped.bed'), path('ref_overlapped.bim'), path('ref_overlapped.fam')
 
-//     output:
-//     file 'ref_overlapped_loads.load', emit: ref_overlapped_loads
-//     file 'ref_overlapped_pca.vect', emit: ref_overlapped_pca
+    output:
+    path 'ref_overlapped_loads.load', emit: ref_overlapped_loads
+    path 'ref_overlapped_pca.vect', emit: ref_overlapped_pca
      
-//     script: 
-//     """
-//     ldak --pca ref_overlapped_pca --grm ref_overlapped_kins --axes $params.num_pc
-//     ldak --calc-pca-loads ref_overlapped_loads --grm ref_overlapped_kins --pcastem ref_overlapped_pca --bfile ref_overlapped
-//     """
-// }
+    script: 
+    """
+    ldak --pca ref_overlapped_pca --grm ref_overlapped_kins --axes ${params.num_pc}
+    ldak --calc-pca-loads ref_overlapped_loads --grm ref_overlapped_kins --pcastem ref_overlapped_pca --bfile ref_overlapped
+    """
+}
 
-// process mapSampleGenToRef{
-//     publishDir "${params.outdir}", mode: 'copy'
+process mapSampleGenToRef{
+    publishDir "${params.outdir}/pop_assign", mode: 'copy'
     
-//     input:
-//     set file('sample_gen_overlapped.bed'), file('sample_gen_overlapped.bim'), file('sample_gen_overlapped.fam')
-//     file 'ref_overlapped_loads.load'
+    input:
+    tuple path('sample_gen_overlapped.bed'), path('sample_gen_overlapped.bim'), path('sample_gen_overlapped.fam')
+    path 'ref_overlapped_loads.load'
 
-//     output:
-//     file 'sample_gen_scores.profile.adj', emit: sample_gen_scores
+    output:
+    path 'sample_gen_scores.profile.adj', emit: sample_gen_scores
 
-//     script:
-//     """
-//     ldak --calc-scores sample_gen_scores --bfile sample_gen_overlapped --scorefile ref_overlapped_loads.load --power 0
-//     """
-// }
+    script:
+    """
+    ldak --calc-scores sample_gen_scores --bfile sample_gen_overlapped --scorefile ref_overlapped_loads.load --power 0
+    """
+}
 
-// process plot_pca{
-//     publishDir "${params.outdir}", mode: 'copy'
+process plotPCA{
+    publishDir "${params.outdir}/pop_assign", mode: 'copy'
     
-//     input:
-//     file 'sample_gen_scores.profile.adj'
-//     file 'ref_overlapped_pca.vect'
-//     file 'samples_data.tsv'
+    input:
+    path 'sample_gen_scores.profile.adj'
+    path 'ref_overlapped_pca.vect'
+    path 'samples_data.tsv'
 
-//     output:
-//     set file('main_pca.png'), file('projections_only.png'), file('projections_on_ref.png'), file('populations.tsv'), file('knn_threshold.png'), file('knn.png')
+    output:
+    tuple path('ref_pca.png'), path('projections_only.png'), path('projections_on_ref.png'), path('populations.tsv'), path('knn_threshold.png'), path('knn.png')
 
-//     script:
-//     """
-//     Rscript $baseDir/bin/pop_assign/plot_pca.R ref_overlapped_pca.vect sample_gen_scores.profile.adj samples_data.tsv $params.data_name
-//     """
+    script:
+    """
+    Rscript $baseDir/bin/pop_assign/plot_pca.R ref_overlapped_pca.vect sample_gen_scores.profile.adj samples_data.tsv ${params.data_name} ${params.num_pc}
+    """
+}
 
-// }
-
-// workflow.onComplete { 
-// 	println ( workflow.success ? "Done!" : "Oops ... something went wrong" )
-// }
 

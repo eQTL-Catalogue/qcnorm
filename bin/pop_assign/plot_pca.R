@@ -22,7 +22,7 @@ ggplot(main_pca, aes(x=PC1, y=PC2, color=as.factor(superpopulation_code))) +
   geom_point() + guides(color = guide_legend(title='Superpopulation')) + 
   labs(x = "PC1", y = "PC2") + ggtitle(data_name)+ coord_fixed()
 
-ggsave('main_pca.png')
+ggsave('ref_pca.png')
 
 projections_pcs <- read.table(projections, header = TRUE)
 projections_pcs <- projections_pcs %>% select(-c(2,3,4)) %>% 
@@ -36,7 +36,7 @@ comb_pcs = rbind(main_pca, projections_pcs)
 
 ggplot(comb_pcs, aes(x=PC1, y=PC2, color=as.factor(superpopulation_code))) + geom_point() + 
   guides(color = guide_legend(title='Superpopulation')) + ggtitle(data_name) + coord_fixed() 
-ggsave('projections_on_main.png')
+ggsave('projections_on_ref.png')
 
 ################### Populations assignment ################### 
 means_main_pca <- main_pca %>% group_by(superpopulation_code) %>% summarize(mean_P1 = mean(PC1), mean_P2 = mean(PC2))
