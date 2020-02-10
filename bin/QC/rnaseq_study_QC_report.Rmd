@@ -8,10 +8,10 @@ params:
   count_matrix_path: "/home/kerimov/work/feature_counts_QC/data/counts/BrainSeq/merged_gene_counts.txt"
   mbv_files_dir: "/home/kerimov/work/feature_counts_QC/data/counts/BrainSeq/MBV/"
   projections: "/home/kerimov/work/feature_counts_QC/data/popAssign/results_BrainSeq/new_dataset_scores.profile.adj"
-  pca_table: "/home/kerimov/work/feature_counts_QC/data/popAssign/results_BrainSeq/main_overlapped_pca.vect"
   phenotype_meta_path: "/home/kerimov/work/feature_counts_QC/data/annotations/gene_counts_Ensembl_96_phenotype_metadata.tsv.gz"
-  source_populations_file: "/home/kerimov/work/feature_counts_QC/data/popAssign/igsr_samples.tsv"
+  eqtl_utils_path: null
   use_plotly: FALSE
+  work_dir: null
 ---
 
 ---
@@ -43,16 +43,20 @@ suppressPackageStartupMessages(library("knitr"))
 suppressPackageStartupMessages(library("gridExtra"))
 suppressPackageStartupMessages(library("grid"))
 
-sample_meta_path <- params$sample_meta_path
 count_matrix_path <- params$count_matrix_path
+sample_meta_path <- params$sample_meta_path
+phenotype_meta_path <- params$phenotype_meta_path
 mbv_files_dir <- params$mbv_files_dir
 projections <- params$projections
-pca_table <- params$pca_table
 use_plotly <- params$use_plotly
 
-phenotype_meta_path <- params$phenotype_meta_path
-source_populations_file <- params$source_populations_file
-# devtools::load_all(params$eqtl_utils_path)
+if (!is.null(params$eqtl_utils_path)){
+  devtools::load_all(params$eqtl_utils_path)
+}
+
+if (!is.null(params$work_dir)){
+   opts_knit$set(root.dir = params$work_dir)
+}
 ```
 
 ```{r read_data, echo=FALSE}
@@ -195,24 +199,13 @@ if (use_plotly) {
 Project genotyped individuals to the first two principal components of the 1000 Genomes Phase 3 reference panel.
 
 ```{r popAssign, echo=FALSE}
-pca <- read.table(pca_table, header = FALSE, )
-pca <- pca %>% select(-c(2)) %>% rename(genotype_id=V1, PC1=V3, PC2=V4, PC3=V5)
-
-source_populations <- read.table(source_populations_file, header = TRUE, sep='\t')
-main_pca <- merge(pca, select(source_populations, genotype_id, superpopulation_code), by  = "genotype_id") 
-
-projections_pcs <- read.table(projections, header = TRUE)
-projections_pcs <- projections_pcs %>% select(-c(2,3,4)) %>% 
-  rename(genotype_id=ID1, PC1=Adjusted1, PC2=Adjusted2, PC3=Adjusted3) %>% 
-  mutate(superpopulation_code = study_name)
-
-comb_pcs = rbind(main_pca, projections_pcs)
+comb_pcs = read.table(projections, header = TRUE, sep='\t')
 projected_plot <- ggplot(comb_pcs, aes(x=PC1, y=PC2, color=superpopulation_code)) + geom_point() + 
   guides(color = guide_legend(title='Superpopulation')) + ggtitle(study_name) +
   ggplot2::theme_bw()
 
-message("Number of genotyped individuals in the current study ", study_name, ": ", projections_pcs %>% nrow())
-message("Number of genotyped individuals in the reference panel: ", main_pca %>% nrow())
+# message("Number of genotyped individuals in the current study ", study_name, ": ", projections_pcs %>% nrow())
+# message("Number of genotyped individuals in the reference panel: ", main_pca %>% nrow())
 
 if (use_plotly) {
   plotly::ggplotly(projected_plot)

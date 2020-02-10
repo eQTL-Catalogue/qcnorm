@@ -285,11 +285,13 @@ process plotPCA{
     path 'samples_data.tsv'
 
     output:
-    tuple path('ref_pca.png'), path('projections_only.png'), path('projections_on_ref.png'), path('populations.tsv'), path('knn_threshold.png'), path('knn.png')
+    path 'plots/*'
+    path 'populations.tsv'
+    path 'projections_comb.tsv'
 
     script:
     """
-    Rscript $baseDir/bin/pop_assign/plot_pca.R ref_overlapped_pca.vect sample_gen_scores.profile.adj samples_data.tsv ${params.data_name} ${params.num_pc}
+    Rscript $baseDir/bin/pop_assign/plot_pca.R ref_overlapped_pca.vect sample_gen_scores.profile.adj samples_data.tsv ${params.data_name}
     """
 }
 
