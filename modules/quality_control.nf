@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
 
-params.data_name = "Study_name_temp"
 params.pop_assign_projections = "${params.outdir}/pop_assign/projections_comb.tsv"
 
 exp_matrix_path = params.is_microarray ? params.exp_matrix_path : 
@@ -54,6 +53,8 @@ process build_qc_report{
     
     output:
     path "*.html"
+    path "*.rds"
+    path "*matrix.tsv"
 
     script:
     mbv_path = params.is_microarray ? "" : "mbv_files_dir = \"${params.quant_results_path}/MBV\","

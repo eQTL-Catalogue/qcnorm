@@ -73,7 +73,6 @@ message("Number of samples in study after quality control: ", sample_metadata[sa
 ```{r create_and_filter_SE, echo=FALSE, include=FALSE}
 se <- eQTLUtils::filterSummarizedExperiment(se, filter_rna_qc = TRUE, filter_genotype_qc = TRUE)
 study_name <- sample_metadata$study[1]
-se
 ```
 ### PCA of gene expression data
 
@@ -99,6 +98,7 @@ processed_se = eQTLUtils::filterSummarizedExperiment(se,
                                                      valid_gene_types = valid_gene_types) %>% eQTLUtils::normaliseSE_tpm()
 processed_se = processed_se[apply(SummarizedExperiment::assays(processed_se)$tpms, 1, median) > 1, ]
 
+readr::write_rds(x = processed_se, path = paste0(study_name, "_filtered_normalised_SE.rds"))
 message("Number of genes with [median(tpm) > 1]: ", processed_se %>% nrow())
 ```
 
@@ -124,6 +124,8 @@ if (use_plotly) {
 } else {
   PCA.plot
 }
+
+readr::write_tsv(x = pca_res$pca_matrix, path = paste0(study_name, "_PCA_matrix.tsv"), col_names = TRUE)
 ```
 
 ### MDS of gene expression data
@@ -160,6 +162,8 @@ mds_plot = ggplot2::ggplot(mds_matrix, ggplot2::aes(x = V1, y = V2, color = qtl_
       title = paste0(study_name, " MDS - TPM normalized, log2 | Sample Size: ", nrow(processed_se %>% SummarizedExperiment::colData()))) +
     ggplot2::theme(plot.title = element_text(size = 12, face="italic")) +
     ggplot2::theme_bw()
+
+readr::write_tsv(x = mds_matrix, path = paste0(study_name, "_MDS_matrix.tsv"), col_names = TRUE)
 ```
 
 ```{r mds_plot, echo=FALSE}
@@ -192,6 +196,8 @@ if (use_plotly) {
 } else {
   Sex_QC_plot
 }
+
+readr::write_tsv(x = sex_qc_df, path = paste0(study_name, "_sex_spec_exp_matrix.tsv"), col_names = TRUE)
 ```
 
 ### Assign genotyped individuals to populations
@@ -235,6 +241,7 @@ best_matches$is_correct_match <- best_matches$mbv_genotype_id == best_matches$ge
 best_matches <- best_matches %>% dplyr::arrange(distance) %>% as.data.frame()
 message("Number of non-matching genotypes: ", which(!best_matches$is_correct_match) %>% length())
 message("Number of matching genotypes: ", which(best_matches$is_correct_match) %>% length())
+readr::write_tsv(x = best_matches, path = paste0(study_name, "MBV_best_matches_matrix.tsv"), col_names = TRUE)
 ```
 
 ```{r plot_mbv_con_hist, echo=FALSE, message=FALSE, warning=FALSE}
