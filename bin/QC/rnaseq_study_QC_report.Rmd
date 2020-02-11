@@ -199,13 +199,20 @@ if (use_plotly) {
 Project genotyped individuals to the first two principal components of the 1000 Genomes Phase 3 reference panel.
 
 ```{r popAssign, echo=FALSE}
+superpopulation_codes = c("AFR", "AMR", "EAS", "EUR", "SAS")
 comb_pcs = read.table(projections, header = TRUE, sep='\t')
-projected_plot <- ggplot(comb_pcs, aes(x=PC1, y=PC2, color=superpopulation_code)) + geom_point() + 
+projected_plot <- ggplot(comb_pcs, aes(x=PC1, y=PC2)) + 
+  geom_point(aes(colour = factor(superpopulation_code), alpha = 0.7)) +
+  geom_point(data = comb_pcs %>% filter(!(superpopulation_code %in% superpopulation_codes)), 
+             aes(colour = factor(superpopulation_code))) +
   guides(color = guide_legend(title='Superpopulation')) + ggtitle(study_name) +
   ggplot2::theme_bw()
 
-# message("Number of genotyped individuals in the current study ", study_name, ": ", projections_pcs %>% nrow())
-# message("Number of genotyped individuals in the reference panel: ", main_pca %>% nrow())
+
+message("Number of genotyped individuals in the current study ", study_name, ": ", 
+        comb_pcs[!(comb_pcs$superpopulation_code %in% superpopulation_codes),] %>% nrow())
+message("Number of genotyped individuals in the reference panel: ", 
+        comb_pcs[comb_pcs$superpopulation_code %in% superpopulation_codes,] %>% nrow())
 
 if (use_plotly) {
   plotly::ggplotly(projected_plot)
