@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
 
-params.pop_assign_projections = "${params.outdir}/pop_assign/projections_comb.tsv"
+params.pop_assign_projections = "${params.outdir}/${params.study_name}/pop_assign/projections_comb.tsv"
 
 exp_matrix_path = params.is_microarray ? params.exp_matrix_path : 
                     "${params.quant_results_path}/featureCounts/merged_gene_counts.txt"
@@ -39,7 +39,7 @@ workflow quality_control {
 }
 
 process build_qc_report{
-    publishDir "${params.outdir}/QC", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/QC", mode: 'copy'
     
     label 'process_low'
     container = 'kerimoff/qc_report:latest'

@@ -2,7 +2,6 @@
 nextflow.preview.dsl=2
 
 params.num_pc = 3
-params.data_name = "Study_name_temp"
 
 Channel
     .fromPath(params.vcf_file)
@@ -144,7 +143,7 @@ process getSNPsFromRef{
 
 // convert vcf file to plink binary file (.bed)
 process sampleVCftoBED{
-    publishDir "${params.outdir}/pop_assign", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/pop_assign", mode: 'copy'
     
     input:
     path 'sample.vcf.gz'
@@ -166,7 +165,7 @@ process sampleVCftoBED{
 }
 
 process calculateRelatednessMatrix{
-    publishDir "${params.outdir}/pop_assign", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/pop_assign", mode: 'copy'
 
     input:
     tuple path('sample_genotype.bed'), path('sample_genotype.bim'), path('sample_genotype.fam')
@@ -243,7 +242,7 @@ process calcKinsMatrices{
 }
 
 process calcRefPcaAndLoads{
-    publishDir "${params.outdir}/pop_assign", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/pop_assign", mode: 'copy'
 
     input:
     tuple path("ref_overlapped_kins.grm.bin"), path("ref_overlapped_kins.grm.id"), path("ref_overlapped_kins.grm.adjust"), path("ref_overlapped_kins.grm.details")
@@ -261,7 +260,7 @@ process calcRefPcaAndLoads{
 }
 
 process mapSampleGenToRef{
-    publishDir "${params.outdir}/pop_assign", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/pop_assign", mode: 'copy'
     
     input:
     tuple path('sample_gen_overlapped.bed'), path('sample_gen_overlapped.bim'), path('sample_gen_overlapped.fam')
@@ -277,7 +276,7 @@ process mapSampleGenToRef{
 }
 
 process plotPCA{
-    publishDir "${params.outdir}/pop_assign", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/pop_assign", mode: 'copy'
     
     input:
     path 'sample_gen_scores.profile.adj'
@@ -291,7 +290,7 @@ process plotPCA{
 
     script:
     """
-    Rscript $baseDir/bin/pop_assign/plot_pca.R ref_overlapped_pca.vect sample_gen_scores.profile.adj samples_data.tsv ${params.data_name}
+    Rscript $baseDir/bin/pop_assign/plot_pca.R ref_overlapped_pca.vect sample_gen_scores.profile.adj samples_data.tsv ${params.study_name}
     """
 }
 
