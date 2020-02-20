@@ -58,37 +58,45 @@ workflow normalise {
                 sample_metadata_ch, 
                 Channel.fromPath(params.ge_pheno_meta_path, checkIfExists: true))
         }
+        tpm_quantile_ch = params.external_quantile_tpm ? 
+                    Channel.fromPath(params.external_quantile_tpm, checkIfExists: true) :
+                    normalise_RNAseq_ge.out.quantile_tpm_file
+
         if (!params.skip_exon_norm) {
             normalise_RNAseq_exon(
                 exon_count_matrix_ch,
                 sample_metadata_ch,
-                Channel.fromPath(params.exon_pheno_meta_path, checkIfExists: true))
+                Channel.fromPath(params.exon_pheno_meta_path, checkIfExists: true),
+                tpm_quantile_ch)
         }
         if (!params.skip_tx_norm) {
             normalise_RNAseq_tx(
                 tx_usage_matrix_ch,
                 sample_metadata_ch,
-                Channel.fromPath(params.tx_pheno_meta_path, checkIfExists: true))
+                Channel.fromPath(params.tx_pheno_meta_path, checkIfExists: true),
+                tpm_quantile_ch)
         } 
         if (!params.skip_txrev_norm) {
             normalise_RNAseq_txrev(
                 txrev_usage_matrix_ch,
                 sample_metadata_ch,
-                Channel.fromPath(params.txrev_pheno_meta_path, checkIfExists: true))
+                Channel.fromPath(params.txrev_pheno_meta_path, checkIfExists: true),
+                tpm_quantile_ch)
         }
         if (!params.skip_leafcutter_norm) {
             normalise_RNAseq_leafcutter(
                 leafcutter_matrix_ch,
                 sample_metadata_ch,
                 Channel.fromPath(params.leafcutter_transcript_meta, checkIfExists: true),
-                Channel.fromPath(params.leafcutter_intron_annotation, checkIfExists: true))
+                Channel.fromPath(params.leafcutter_intron_annotation, checkIfExists: true),
+                tpm_quantile_ch)
         }
     }
 
 }
 
 process normalise_microarray{
-    publishDir "${params.outdir}/${params.study_name}/normalised/", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/normalised/miroarray", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -120,7 +128,7 @@ process normalise_microarray{
 }
 
 process normalise_RNAseq_ge{
-    publishDir "${params.outdir}/${params.study_name}/normalised/", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/normalised/ge", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -132,6 +140,9 @@ process normalise_RNAseq_ge{
     
     output:
     path "*.gene_counts_cqn_norm.tsv"
+    path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
+    path "*_median_tpm.tsv.gz"
+    path "qtl_group_split_norm/"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -152,7 +163,7 @@ process normalise_RNAseq_ge{
 }
 
 process normalise_RNAseq_exon{
-    publishDir "${params.outdir}/${params.study_name}/normalised/", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/normalised/exon", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -161,14 +172,17 @@ process normalise_RNAseq_exon{
     path count_matrix
     path sample_metadata
     path pheno_metadata
+    path tpm_quantile
     
     output:
     path "*.exon_counts_cqn_norm.tsv"
+    path "qtl_group_split_norm/"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
     keep_XY = params.norm_keep_XY ? "--keep_XY TRUE" : ""
     eqtl_utils_path = params.eqtl_utils_path ? "--eqtlutils ${params.eqtl_utils_path}" : ""
+    tpm_path =
     """
     Rscript $baseDir/bin/normalisation/normaliseCountMatrix.R\
       -c $count_matrix\
@@ -176,6 +190,7 @@ process normalise_RNAseq_exon{
       -p $pheno_metadata\
       -o .\
       -q exon_counts\
+      -t $tpm_quantile\
       $filter_qc\
       $keep_XY\
       $eqtl_utils_path
@@ -184,7 +199,7 @@ process normalise_RNAseq_exon{
 }
 
 process normalise_RNAseq_tx{
-    publishDir "${params.outdir}/${params.study_name}/normalised/", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/normalised/tx", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -193,9 +208,11 @@ process normalise_RNAseq_tx{
     path count_matrix
     path sample_metadata
     path pheno_metadata
+    path tpm_quantile
     
     output:
     path "*_qnorm.tsv"
+    path "qtl_group_split_norm/"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -208,6 +225,7 @@ process normalise_RNAseq_tx{
       -p $pheno_metadata\
       -o .\
       -q transcript_usage\
+      -t $tpm_quantile\
       $filter_qc\
       $keep_XY\
       $eqtl_utils_path
@@ -216,7 +234,7 @@ process normalise_RNAseq_tx{
 }
 
 process normalise_RNAseq_txrev{
-    publishDir "${params.outdir}/${params.study_name}/normalised/", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/normalised/txrev", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -225,9 +243,11 @@ process normalise_RNAseq_txrev{
     path count_matrix
     path sample_metadata
     path pheno_metadata
+    path tpm_quantile
     
     output:
     path "*_qnorm.tsv"
+    path "qtl_group_split_norm/"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -240,6 +260,7 @@ process normalise_RNAseq_txrev{
       -p $pheno_metadata\
       -o .\
       -q txrevise\
+      -t $tpm_quantile\
       $filter_qc\
       $keep_XY\
       $eqtl_utils_path
@@ -248,7 +269,7 @@ process normalise_RNAseq_txrev{
 }
 
 process normalise_RNAseq_leafcutter{
-    publishDir "${params.outdir}/${params.study_name}/normalised/", mode: 'copy'
+    publishDir "${params.outdir}/${params.study_name}/normalised/leafcutter", mode: 'copy'
     
     label 'process_medium'
     container = 'kauralasoo/eqtlutils:96d357d24e1b14e312298bdbd2deb0fd408660a3' //change it to more stable image
@@ -258,10 +279,12 @@ process normalise_RNAseq_leafcutter{
     path sample_metadata
     path transcript_meta
     path intron_annotation
+    path tpm_quantile
     
     output:
     path "*_qnorm.tsv"
     path "leafcutter_metadata.txt.gz"
+    path "qtl_group_split_norm/"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -282,9 +305,11 @@ process normalise_RNAseq_leafcutter{
       -p leafcutter_metadata.txt.gz\
       -o .\
       -q leafcutter\
+      -t $tpm_quantile\
       $filter_qc\
       $keep_XY\
       $eqtl_utils_path
 
     """
 }
+

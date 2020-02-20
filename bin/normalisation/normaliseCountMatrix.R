@@ -1,6 +1,7 @@
 message(" ## Loading libraries: optparse")
 suppressPackageStartupMessages(library("optparse"))
 
+
 #Parse command-line options
 option_list <- list(
   #TODO look around if there is a package recognizing delimiter in dataset
@@ -16,6 +17,8 @@ option_list <- list(
               help="Path to the output directory. [default \"%default\"]", metavar = "type"),
   make_option(c("-n", "--name_of_study"), type="character", default=NULL,
               help="Name of the study. Optional", metavar = "type"),
+  make_option(c("-t", "--tpm_quantile_file"), type="character", default=NULL,
+              help="TPM quantile TSV file with phenotype_id column", metavar = "type"),
   make_option(c("--filter_qc"), type="logical", default=FALSE,
               help="Flag to filter out samples that have failed QC [default \"%default\"]", metavar = "bool"),
   make_option(c("--keep_XY"), type="logical", default=FALSE,
@@ -48,9 +51,9 @@ count_matrix_path = opt$c
 sample_meta_path = opt$s
 phenotype_meta_path = opt$p
 output_dir = opt$o
-eqtl_utils_path = opt$e
 quant_method = opt$q
 study_name = opt$n
+quantile_tpm_path = opt$t
 filter_qc = opt$filter_qc
 eqtlutils_path = opt$eqtlutils
 keep_XY = opt$keep_XY
@@ -88,6 +91,10 @@ if (is.null(study_name)) {
 
 message("## Reading phenotype metadata ##")
 phenotype_meta = readr::read_delim(phenotype_meta_path, delim = "\t", col_types = "ccccciiicciidi")
+quantile_tpm_df = NULL
+if(!is.null(quantile_tpm_path)) {
+  quantile_tpm_df = readr::read_delim(quantile_tpm_path, delim = "\t", col_types = "cccd")
+}
 
 message("## Reading count matrix ##")
 if (quant_method == "txrevise") {
@@ -98,11 +105,9 @@ if (quant_method == "txrevise") {
 } else {
   data_fc <- utils::read.csv(count_matrix_path, sep = '\t', stringsAsFactors = FALSE, check.names = FALSE)
 }
-print(data_fc[1:5, 1:5])
 
 message("## Make Summarized Experiment ##")
 se <- eQTLUtils::makeSummarizedExperimentFromCountMatrix(assay = data_fc, row_data = phenotype_meta, col_data = sample_metadata, quant_method = quant_method)
-se
 
 if (filter_qc){
   message("## Filter SummarizedExperiment by removing samples that fail QC ##")
@@ -121,6 +126,21 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised gene count matrix exported into: ", output_dir, study_name , ".gene_counts_cqn_norm.tsv")
   
+  # message("## Caclulate median TPM in each biological context ##")
+  median_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.5)
+  gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")), "w")
+  write.table(median_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
+  close(gzfile)
+
+  # message("## Caclulate 95% quantile TPM in each biological context ##")
+  quantile_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.95)
+  gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_95quantile_tpm.tsv.gz")), "w")
+  write.table(quantile_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
+  close(gzfile)
+  message("## Median tpm values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")))
+  
+  eQTLUtils::studySEtoCountMatrices(se = cqn_norm, assay_name = "cqn", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  message("## Splitted count matrix according to qtl_group: ", output_dir)
 } else if (quant_method=="exon_counts") {
   cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se, "exon_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
   cqn_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_norm)[["cqn"]]), assays(cqn_norm)[["cqn"]])
@@ -128,6 +148,8 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised exon count matrix exported into: ", output_dir, study_name , ".exon_counts_cqn_norm.tsv")
   
+  eQTLUtils::studySEtoCountMatrices(se = cqn_norm, assay_name = "cqn", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  message("## Splitted count matrix according to qtl_group: ", output_dir)
 } else if (quant_method %in% c("transcript_usage", "txrevise")) {
   q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "txrevise", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
   qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
@@ -135,6 +157,8 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised transcript usage matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
   
+  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  message("## Splitted count matrix according to qtl_group: ", output_dir)
 } else if (quant_method == "leafcutter") {
   q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "leafcutter", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
   qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
@@ -142,6 +166,8 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised LeafCutter matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
   
+  eQTLUtils::studySEtoQTLTools(se = q_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  message("## Splitted bed files are exported to: ", output_dir)
 } else if (quant_method == "HumanHT-12_V4") {
   q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "HumanHT-12_V4", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
   qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["norm_exprs"]]), assays(q_norm)[["norm_exprs"]])
@@ -149,4 +175,7 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised HumanHT-12_V4 matrix exported to: ", output_dir, study_name, ".", quant_method, "_norm_exprs.tsv")
   
+  eQTLUtils::studySEtoQTLTools(se = q_norm, assay_name = "norm_exprs", out_dir = output_dir)
+  message("## Splitted bed files are exported to: ", output_dir)
 }
+
