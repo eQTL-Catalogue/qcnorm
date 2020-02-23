@@ -24,6 +24,10 @@ if(params.exclude_population){
         .ifEmpty { exit 1, "Populations metadata file not found: ${params.ids_to_remove_file}" } 
         .set { ids_to_remove_file_ch }
 }
+
+workflow {
+    pop_assign()
+}
     
 workflow pop_assign {
     refVCFtoBED(ref_genome_ch)

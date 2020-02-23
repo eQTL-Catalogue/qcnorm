@@ -1,5 +1,9 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
+params.publishDir="${params.outdir}/${params.study_name}/normalised"
+qtl_inputs_def_file = file("$baseDir/assets/qtlmap_inputs.tsv")
+qtl_inputs_def_file.copyTo("${params.outdir}/${params.study_name}/${params.study_name}_qtlmap_inputs.tsv")
+qtlmap_inputs_file = file("${params.outdir}/${params.study_name}/${params.study_name}_qtlmap_inputs.tsv")
 
 exp_matrix_path = params.is_microarray ? 
                     params.exp_matrix_path : 
@@ -39,6 +43,8 @@ if(!params.skip_leafcutter_norm && !params.is_microarray){
         .set { leafcutter_matrix_ch }
 }
 
+qtlmap_tsv_input_ch = Channel.empty()
+
 Channel
     .fromPath(params.sample_meta_path, checkIfExists: true)
     .set { sample_metadata_ch }
@@ -57,6 +63,20 @@ workflow normalise {
                 ge_count_matrix_ch, 
                 sample_metadata_ch, 
                 Channel.fromPath(params.ge_pheno_meta_path, checkIfExists: true))
+
+        normalise_RNAseq_ge.out.qtlmap_tsv_input_ch
+            .combine(normalise_RNAseq_ge.out.quantile_tpm_file)
+            .collectFile(storeDir:"${params.publishDir}/qtl_group_inputs") { item ->
+                [ "${params.study_name}_ge_tsv_inputs.txt", 
+                "${params.study_name}_${item[0].simpleName}_ge\t" + 
+                "${params.publishDir}/ge/qtl_group_split_norm/${item[0].fileName}\t" + 
+                "${params.ge_pheno_meta_path}\t" + 
+                "${params.sample_meta_path}\t" + 
+                "${params.vcf_file}\t" + 
+                "${params.publishDir}/${item[1].fileName}" + '\n' ]
+            }
+            .subscribe{ qtlmap_inputs_file.append(it.text) }
+                
         }
         tpm_quantile_ch = params.external_quantile_tpm ? 
                     Channel.fromPath(params.external_quantile_tpm, checkIfExists: true) :
@@ -68,6 +88,14 @@ workflow normalise {
                 sample_metadata_ch,
                 Channel.fromPath(params.exon_pheno_meta_path, checkIfExists: true),
                 tpm_quantile_ch)
+
+            // qtlmap_tsv_input_ch = 
+            //     Channel
+            //         .from("exon", "${params.publishDir}", "${params.exon_pheno_meta_path}")
+            //         .collect()
+            //         .combine(normalise_RNAseq_exon.out.qtlmap_tsv_input_ch.flatten())
+            //         .combine(tpm_quantile_ch.flatten())
+            //         .mix(qtlmap_tsv_input_ch)
         }
         if (!params.skip_tx_norm) {
             normalise_RNAseq_tx(
@@ -75,6 +103,14 @@ workflow normalise {
                 sample_metadata_ch,
                 Channel.fromPath(params.tx_pheno_meta_path, checkIfExists: true),
                 tpm_quantile_ch)
+
+            // qtlmap_tsv_input_ch = 
+            //     Channel
+            //         .from("tx", "${params.publishDir}", "${params.tx_pheno_meta_path}")
+            //         .collect()
+            //         .combine(normalise_RNAseq_tx.out.qtlmap_tsv_input_ch.flatten())
+            //         .combine(tpm_quantile_ch.flatten())
+            //         .mix(qtlmap_tsv_input_ch)
         } 
         if (!params.skip_txrev_norm) {
             normalise_RNAseq_txrev(
@@ -82,6 +118,14 @@ workflow normalise {
                 sample_metadata_ch,
                 Channel.fromPath(params.txrev_pheno_meta_path, checkIfExists: true),
                 tpm_quantile_ch)
+
+            // qtlmap_tsv_input_ch = 
+            //     Channel
+            //         .from("txrev", "${params.publishDir}", "${params.txrev_pheno_meta_path}")
+            //         .collect()
+            //         .combine(normalise_RNAseq_txrev.out.qtlmap_tsv_input_ch.flatten())
+            //         .combine(tpm_quantile_ch.flatten())
+            //         .mix(qtlmap_tsv_input_ch)
         }
         if (!params.skip_leafcutter_norm) {
             normalise_RNAseq_leafcutter(
@@ -90,9 +134,13 @@ workflow normalise {
                 Channel.fromPath(params.leafcutter_transcript_meta, checkIfExists: true),
                 Channel.fromPath(params.leafcutter_intron_annotation, checkIfExists: true),
                 tpm_quantile_ch)
+
+            // qtlmap_tsv_input_ch
+            //     .mix(normalise_RNAseq_leafcutter.out.qtlmap_tsv_input_ch)
+            //     .set { qtlmap_tsv_input_ch }
         }
     }
-
+    // generate_qtlmap_input_tsv(qtlmap_tsv_input_ch, Channel.fromPath("$baseDir/assets/qtlmap_inputs.tsv"))
 }
 
 process normalise_microarray{
@@ -128,8 +176,9 @@ process normalise_microarray{
 }
 
 process normalise_RNAseq_ge{
-    publishDir "${params.outdir}/${params.study_name}/normalised/ge", mode: 'copy'
-    
+    publishDir "${params.outdir}/${params.study_name}/normalised/ge", mode: 'copy',
+        saveAs: {filename -> filename.indexOf("_tpm.tsv.gz") > 0 ? "../$filename" : "$filename"}
+
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
     
@@ -142,8 +191,9 @@ process normalise_RNAseq_ge{
     path "*.gene_counts_cqn_norm.tsv"
     path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
     path "*_median_tpm.tsv.gz"
-    path "qtl_group_split_norm/"
-
+    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    // tuple val("ge"), val("${params.outdir}/${params.study_name}/normalised"), path("qtl_group_split_norm/*"), val(params.ge_pheno_meta_path), path("*_95quantile_tpm.tsv.gz"), emit: qtlmap_tsv_input_ch
+    
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
     keep_XY = params.norm_keep_XY ? "--keep_XY TRUE" : ""
@@ -176,13 +226,14 @@ process normalise_RNAseq_exon{
     
     output:
     path "*.exon_counts_cqn_norm.tsv"
-    path "qtl_group_split_norm/"
+    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    // tuple val("exon"), val("${params.outdir}/${params.study_name}/normalised"), path("qtl_group_split_norm/*"), val(params.exon_pheno_meta_path), path(tpm_quantile), emit: qtlmap_tsv_input_ch
+
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
     keep_XY = params.norm_keep_XY ? "--keep_XY TRUE" : ""
     eqtl_utils_path = params.eqtl_utils_path ? "--eqtlutils ${params.eqtl_utils_path}" : ""
-    tpm_path =
     """
     Rscript $baseDir/bin/normalisation/normaliseCountMatrix.R\
       -c $count_matrix\
@@ -212,7 +263,8 @@ process normalise_RNAseq_tx{
     
     output:
     path "*_qnorm.tsv"
-    path "qtl_group_split_norm/"
+    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    // tuple val("tx"), val("${params.outdir}/${params.study_name}/normalised"), path("qtl_group_split_norm/*"), val(params.tx_pheno_meta_path), path(tpm_quantile), emit: qtlmap_tsv_input_ch
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -247,7 +299,8 @@ process normalise_RNAseq_txrev{
     
     output:
     path "*_qnorm.tsv"
-    path "qtl_group_split_norm/"
+    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    // tuple val("txrev"), val("${params.outdir}/${params.study_name}/normalised"), path("qtl_group_split_norm/*"), val(params.txrev_pheno_meta_path), path(tpm_quantile), emit: qtlmap_tsv_input_ch
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -285,6 +338,8 @@ process normalise_RNAseq_leafcutter{
     path "*_qnorm.tsv"
     path "leafcutter_metadata.txt.gz"
     path "qtl_group_split_norm/"
+    // val "${params.outdir}/${params.study_name}/normalised/leafcutter/qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    // TODO: Test leafcutter behaviour. never tested
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -313,3 +368,24 @@ process normalise_RNAseq_leafcutter{
     """
 }
 
+// process generate_qtlmap_input_tsv {
+//     publishDir "${params.outdir}/${params.study_name}/", mode: 'copy'
+//     stageInMode "link"
+
+//     label 'process_low'
+//     container = 'kerimoff/eqtlutils:latest'
+    
+//     input:
+//     path input_tsv_file
+//     path "qtlmap_inputs.tsv"
+
+//     output:
+//     path "qtlmap_inputs.tsv"
+
+//     script:
+//     """
+//     echo -e '${published_file.baseName}.$quant_method\t$published_dir/$quant_method/${published_file.fileName}\t$pheno_metadata_path\t${params.sample_meta_path}\t${params.vcf_file}\t$published_dir/${quantile_tpm_file.fileName}\n'\
+//      >> qtlmap_inputs.tsv
+//     """
+
+// }
