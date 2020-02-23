@@ -47,18 +47,33 @@ Channel
     .fromPath(params.sample_meta_path, checkIfExists: true)
     .set { sample_metadata_ch }
 
-def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_tuple, quant_method){
-    qtlgroup_quantiletpm_tuple
-    .collectFile(storeDir:"${params.outdir}/${params.study_name}/qtl_group_inputs") { item ->
-                [ "${params.study_name}_${quant_method}_tsv_inputs.txt", 
-                "${item[0].baseName}_${quant_method}\t" + 
-                "${params.publishDir}/${quant_method}/qtl_group_split_norm/${item[0].fileName}\t" + 
-                "${params.ge_pheno_meta_path}\t" + 
-                "${params.sample_meta_path}\t" + 
-                "${params.vcf_file}\t" + 
-                "${params.publishDir}/${item[1].fileName}" + '\n' ]
-            }
-            .subscribe{ qtlmap_inputs_file.append(it.text) }
+def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
+    if (quant_method=="microarray"){
+        qtlgroup_quantiletpm_ch
+        .collectFile(storeDir:"${params.outdir}/${params.study_name}/qtl_group_inputs") { item ->
+                    [ "${params.study_name}_${quant_method}_tsv_inputs.txt", 
+                    "${item.baseName}_${quant_method}\t" + 
+                    "${params.publishDir}/${quant_method}/qtl_group_split_norm/${item.fileName}\t" + 
+                    "${params.ge_pheno_meta_path}\t" + 
+                    "${params.sample_meta_path}\t" + 
+                    "${params.vcf_file}\t" + 
+                    "" + '\n' ]
+                }
+                .subscribe{ qtlmap_inputs_file.append(it.text) }
+    }
+    else {
+        qtlgroup_quantiletpm_ch
+        .collectFile(storeDir:"${params.outdir}/${params.study_name}/qtl_group_inputs") { item ->
+                    [ "${params.study_name}_${quant_method}_tsv_inputs.txt", 
+                    "${item[0].baseName}_${quant_method}\t" + 
+                    "${params.publishDir}/${quant_method}/qtl_group_split_norm/${item[0].fileName}\t" + 
+                    "${params.ge_pheno_meta_path}\t" + 
+                    "${params.sample_meta_path}\t" + 
+                    "${params.vcf_file}\t" + 
+                    "${params.publishDir}/${item[1].fileName}" + '\n' ]
+                }
+                .subscribe{ qtlmap_inputs_file.append(it.text) }
+    }
 }
 
 workflow normalise {
@@ -67,6 +82,8 @@ workflow normalise {
             ge_count_matrix_ch, 
             sample_metadata_ch, 
             Channel.fromPath(params.array_pheno_meta_path, checkIfExists: true))
+
+        add_to_qtlmap_input_tsv(normalise_microarray.out.qtlmap_tsv_input_ch.flatten(), "microarray")
     }
     else {
         if (!params.skip_ge_norm) {
@@ -128,7 +145,7 @@ workflow normalise {
 }
 
 process normalise_microarray{
-    publishDir "${params.outdir}/${params.study_name}/normalised/miroarray", mode: 'copy'
+    publishDir "${params.publishDir}/microarray", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -139,7 +156,8 @@ process normalise_microarray{
     path pheno_metadata
     
     output:
-    path "*._norm_exprs.tsv"
+    path "*_norm_exprs.tsv"
+    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -160,7 +178,7 @@ process normalise_microarray{
 }
 
 process normalise_RNAseq_ge{
-    publishDir "${params.outdir}/${params.study_name}/normalised/ge", mode: 'copy',
+    publishDir "${params.publishDir}/ge", mode: 'copy',
         saveAs: {filename -> filename.indexOf("_tpm.tsv.gz") > 0 ? "../$filename" : "$filename"}
 
     label 'process_medium'
@@ -196,7 +214,7 @@ process normalise_RNAseq_ge{
 }
 
 process normalise_RNAseq_exon{
-    publishDir "${params.outdir}/${params.study_name}/normalised/exon", mode: 'copy'
+    publishDir "${params.publishDir}/exon", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -231,7 +249,7 @@ process normalise_RNAseq_exon{
 }
 
 process normalise_RNAseq_tx{
-    publishDir "${params.outdir}/${params.study_name}/normalised/tx", mode: 'copy'
+    publishDir "${params.publishDir}/tx", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -266,7 +284,7 @@ process normalise_RNAseq_tx{
 }
 
 process normalise_RNAseq_txrev{
-    publishDir "${params.outdir}/${params.study_name}/normalised/txrev", mode: 'copy'
+    publishDir "${params.publishDir}/txrev", mode: 'copy'
     
     label 'process_medium'
     container = 'kerimoff/eqtlutils:latest'
@@ -301,7 +319,7 @@ process normalise_RNAseq_txrev{
 }
 
 process normalise_RNAseq_leafcutter{
-    publishDir "${params.outdir}/${params.study_name}/normalised/leafcutter", mode: 'copy'
+    publishDir "${params.publishDir}/leafcutter", mode: 'copy'
     
     label 'process_medium'
     container = 'kauralasoo/eqtlutils:96d357d24e1b14e312298bdbd2deb0fd408660a3' //change it to more stable image

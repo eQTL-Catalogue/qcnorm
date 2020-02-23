@@ -166,7 +166,7 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised LeafCutter matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
   
-  eQTLUtils::studySEtoQTLTools(se = q_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
   message("## Splitted bed files are exported to: ", output_dir)
 } else if (quant_method == "HumanHT-12_V4") {
   q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "HumanHT-12_V4", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
@@ -175,7 +175,7 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised HumanHT-12_V4 matrix exported to: ", output_dir, study_name, ".", quant_method, "_norm_exprs.tsv")
   
-  eQTLUtils::studySEtoQTLTools(se = q_norm, assay_name = "norm_exprs", out_dir = output_dir)
+  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "norm_exprs", out_dir = output_dir)
   message("## Splitted bed files are exported to: ", output_dir)
 }
 
