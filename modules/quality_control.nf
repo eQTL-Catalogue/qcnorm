@@ -3,7 +3,7 @@ nextflow.preview.dsl=2
 
 params.pop_assign_projections = "${params.outdir}/${params.study_name}/pop_assign/projections_comb.tsv"
 
-exp_matrix_path = params.is_microarray ? params.exp_matrix_path : 
+exp_matrix_path = params.is_microarray ? params.microarray_exp_matrix_path : 
                     "${params.quant_results_path}/featureCounts/merged_gene_counts.txt"
 Channel
     .fromPath(exp_matrix_path, checkIfExists: true)
