@@ -32,44 +32,48 @@ workflow {
 }
     
 workflow pop_assign {
-    refVCFtoBED(ref_genome_ch)
-    refBedNoDubl = params.exclude_population ? 
-        removeFamilyFromRef(refVCFtoBED.out, ids_to_remove_file_ch) : 
-        removeDublFromRef(refVCFtoBED.out)
+    main:
+        refVCFtoBED(ref_genome_ch)
+        refBedNoDubl = params.exclude_population ? 
+            removeFamilyFromRef(refVCFtoBED.out, ids_to_remove_file_ch) : 
+            removeDublFromRef(refVCFtoBED.out)
 
-    getSNPsFromRef(refBedNoDubl)
-    // getSNPsFromRef.out.ref_snps_list
+        getSNPsFromRef(refBedNoDubl)
+        // getSNPsFromRef.out.ref_snps_list
 
-    sampleVCftoBED(vcf_file_ch)
-    // sampleVCftoBED.out.sample_bed, 
-    // sampleVCftoBED.out.relatedness_sample_list 
+        sampleVCftoBED(vcf_file_ch)
+        // sampleVCftoBED.out.sample_bed, 
+        // sampleVCftoBED.out.relatedness_sample_list 
 
-    calculateRelatednessMatrix(sampleVCftoBED.out.sample_bed, sampleVCftoBED.out.relatedness_sample_list)
-    // calculateRelatednessMatrix.out
-    
-    extractSharedSNPsFromSampleGen(sampleVCftoBED.out.sample_bed, 
-        getSNPsFromRef.out.ref_snps_list)
-    // extractSharedSNPsFromSampleGen.out.sample_gen_overlapped
-    // extractSharedSNPsFromSampleGen.out.sample_gen_overlapped_snplist
-    
-    extractSharedSNPsFromRefGen(refBedNoDubl,
-        extractSharedSNPsFromSampleGen.out.sample_gen_overlapped_snplist)
-    // extractSharedSNPsFromRefGen.out.ref_overlapped
-    
-    calcKinsMatrices(extractSharedSNPsFromRefGen.out.ref_overlapped)
-    // calcKinsMatrices.out.ref_overlapped_kins
-    
-    calcRefPcaAndLoads(calcKinsMatrices.out.ref_overlapped_kins,
-        extractSharedSNPsFromRefGen.out.ref_overlapped)
-    // calcRefPcaAndLoads.out.ref_overlapped_loads
-    // calcRefPcaAndLoads.out.ref_overlapped_pca
+        calculateRelatednessMatrix(sampleVCftoBED.out.sample_bed, sampleVCftoBED.out.relatedness_sample_list)
+        // calculateRelatednessMatrix.out
+        
+        extractSharedSNPsFromSampleGen(sampleVCftoBED.out.sample_bed, 
+            getSNPsFromRef.out.ref_snps_list)
+        // extractSharedSNPsFromSampleGen.out.sample_gen_overlapped
+        // extractSharedSNPsFromSampleGen.out.sample_gen_overlapped_snplist
+        
+        extractSharedSNPsFromRefGen(refBedNoDubl,
+            extractSharedSNPsFromSampleGen.out.sample_gen_overlapped_snplist)
+        // extractSharedSNPsFromRefGen.out.ref_overlapped
+        
+        calcKinsMatrices(extractSharedSNPsFromRefGen.out.ref_overlapped)
+        // calcKinsMatrices.out.ref_overlapped_kins
+        
+        calcRefPcaAndLoads(calcKinsMatrices.out.ref_overlapped_kins,
+            extractSharedSNPsFromRefGen.out.ref_overlapped)
+        // calcRefPcaAndLoads.out.ref_overlapped_loads
+        // calcRefPcaAndLoads.out.ref_overlapped_pca
 
-    mapSampleGenToRef(extractSharedSNPsFromSampleGen.out.sample_gen_overlapped,
-        calcRefPcaAndLoads.out.ref_overlapped_loads)
-    // mapSampleGenToRef.out.sample_gen_scores
-    plotPCA(mapSampleGenToRef.out.sample_gen_scores,
-             calcRefPcaAndLoads.out.ref_overlapped_pca,
-             populations_file_ch)
+        mapSampleGenToRef(extractSharedSNPsFromSampleGen.out.sample_gen_overlapped,
+            calcRefPcaAndLoads.out.ref_overlapped_loads)
+        // mapSampleGenToRef.out.sample_gen_scores
+        plotPCA(mapSampleGenToRef.out.sample_gen_scores,
+                calcRefPcaAndLoads.out.ref_overlapped_pca,
+                populations_file_ch)
+
+    emit:
+        projections_ch = plotPCA.out.pop_assign_projections_ch
 }
 
 process refVCFtoBED{
@@ -292,7 +296,7 @@ process plotPCA{
     output:
     path 'plots/*'
     path 'populations.tsv'
-    path 'projections_comb.tsv'
+    path 'projections_comb.tsv', emit: pop_assign_projections_ch
 
     script:
     """

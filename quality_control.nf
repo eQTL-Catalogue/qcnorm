@@ -45,7 +45,8 @@ workflow {
 }
 
 workflow quality_control {
-    take: pop_assign_projections_ch
+    take: 
+    pop_assign_projections_ch
     
     main:
     build_qc_report(
