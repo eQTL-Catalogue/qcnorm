@@ -76,6 +76,10 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
     }
 }
 
+workflow {
+    normalise()
+}
+
 workflow normalise {
     if (params.is_microarray){
         normalise_microarray(
