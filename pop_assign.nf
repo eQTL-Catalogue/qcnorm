@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
 
-params.num_pc = 3
+params.num_pc = params.num_pc == null ? 3 : params.num_pc
 
 Channel
     .fromPath(params.vcf_file)
@@ -26,6 +26,8 @@ if(params.exclude_population){
 }
 
 workflow {
+    if(params.study_name=="") {exit 1, "Error: Please provide --study_name parameter. "} 
+    
     pop_assign()
 }
     
