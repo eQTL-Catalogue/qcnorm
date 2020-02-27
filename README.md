@@ -1,14 +1,3 @@
-# ![nf-core/qcnorm](docs/images/nf-core-qcnorm_logo.png)
-
-**This pipeline will run QC measures of both genotype and phenotype data and will normalise quantified phenotypes**.
-
-[![Build Status](https://travis-ci.com/nf-core/qcnorm.svg?branch=master)](https://travis-ci.com/nf-core/qcnorm)
-[![GitHub Actions CI Status](https://github.com/nf-core/qcnorm/workflows/nf-core%20CI/badge.svg)](https://github.com/nf-core/qcnorm/actions)
-[![GitHub Actions Linting Status](https://github.com/nf-core/qcnorm/workflows/nf-core%20linting/badge.svg)](https://github.com/nf-core/qcnorm/actions)
-[![Nextflow](https://img.shields.io/badge/nextflow-%E2%89%A519.10.0-brightgreen.svg)](https://www.nextflow.io/)
-
-[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg)](http://bioconda.github.io/)
-[![Docker](https://img.shields.io/docker/automated/nfcore/qcnorm.svg)](https://hub.docker.com/r/nfcore/qcnorm)
 
 ## Introduction
 
