@@ -241,7 +241,7 @@ best_matches$is_correct_match <- best_matches$mbv_genotype_id == best_matches$ge
 best_matches <- best_matches %>% dplyr::arrange(distance) %>% as.data.frame()
 message("Number of non-matching genotypes: ", which(!best_matches$is_correct_match) %>% length())
 message("Number of matching genotypes: ", which(best_matches$is_correct_match) %>% length())
-readr::write_tsv(x = best_matches, path = paste0(study_name, "MBV_best_matches_matrix.tsv"), col_names = TRUE)
+readr::write_tsv(x = best_matches, path = paste0(study_name, "_MBV_best_matches_matrix.tsv"), col_names = TRUE)
 ```
 
 ```{r plot_mbv_con_hist, echo=FALSE, message=FALSE, warning=FALSE}

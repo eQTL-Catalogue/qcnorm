@@ -4,6 +4,12 @@ params.publishDir="${params.outdir}/${params.study_name}/normalised"
 qtl_inputs_def_file = file("$baseDir/assets/qtlmap_inputs.tsv")
 qtl_inputs_def_file.copyTo("${params.outdir}/${params.study_name}/${params.study_name}_qtlmap_inputs.tsv")
 qtlmap_inputs_file = file("${params.outdir}/${params.study_name}/${params.study_name}_qtlmap_inputs.tsv")
+pheno_metadata_list = [
+    "ge": params.ge_pheno_meta_path,
+    "exon": params.exon_pheno_meta_path,
+    "tx": params.tx_pheno_meta_path,
+    "txrev": params.txrev_pheno_meta_path
+]
 
 exp_matrix_path = params.is_microarray ? 
                     params.microarray_exp_matrix_path : 
@@ -67,7 +73,7 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
                     [ "${params.study_name}_${quant_method}_tsv_inputs.txt", 
                     "${item[0].baseName}_${quant_method}\t" + 
                     "${params.publishDir}/${quant_method}/qtl_group_split_norm/${item[0].fileName}\t" + 
-                    "${params.ge_pheno_meta_path}\t" + 
+                    "${pheno_metadata_list[quant_method]}\t" + 
                     "${params.sample_meta_path}\t" + 
                     "${params.vcf_file}\t" + 
                     "${params.publishDir}/${item[1].fileName}" + '\n' ]
@@ -97,12 +103,16 @@ workflow normalise {
                 Channel.fromPath(params.ge_pheno_meta_path, checkIfExists: true))
         
         add_to_qtlmap_input_tsv(normalise_RNAseq_ge.out.qtlmap_tsv_input_ch.flatten()
-            .combine(normalise_RNAseq_ge.out.quantile_tpm_file), "ge")
+            .combine(normalise_RNAseq_ge.out.median_tpm_file), "ge")
                 
         }
         tpm_quantile_ch = params.external_quantile_tpm ? 
                     Channel.fromPath(params.external_quantile_tpm, checkIfExists: true) :
                     normalise_RNAseq_ge.out.quantile_tpm_file
+
+        median_tpm_file_ch = params.external_median_tpm ? 
+                    Channel.fromPath(params.external_median_tpm, checkIfExists: true) :
+                    normalise_RNAseq_ge.out.median_tpm_file
 
         if (!params.skip_exon_norm) {
             normalise_RNAseq_exon(
@@ -112,7 +122,7 @@ workflow normalise {
                 tpm_quantile_ch)
 
             add_to_qtlmap_input_tsv(normalise_RNAseq_exon.out.qtlmap_tsv_input_ch.flatten()
-                .combine(tpm_quantile_ch), "exon")
+                .combine(median_tpm_file_ch), "exon")
         }
         if (!params.skip_tx_norm) {
             normalise_RNAseq_tx(
@@ -122,7 +132,7 @@ workflow normalise {
                 tpm_quantile_ch)
 
             add_to_qtlmap_input_tsv(normalise_RNAseq_tx.out.qtlmap_tsv_input_ch.flatten()
-                .combine(tpm_quantile_ch), "tx")
+                .combine(median_tpm_file_ch), "tx")
         } 
         if (!params.skip_txrev_norm) {
             normalise_RNAseq_txrev(
@@ -132,7 +142,7 @@ workflow normalise {
                 tpm_quantile_ch)
 
             add_to_qtlmap_input_tsv(normalise_RNAseq_txrev.out.qtlmap_tsv_input_ch.flatten()
-                .combine(tpm_quantile_ch), "txrev")
+                .combine(median_tpm_file_ch), "txrev")
         }
         if (!params.skip_leafcutter_norm) {
             normalise_RNAseq_leafcutter(
@@ -142,8 +152,8 @@ workflow normalise {
                 Channel.fromPath(params.leafcutter_intron_annotation, checkIfExists: true),
                 tpm_quantile_ch)
 
-            add_to_qtlmap_input_tsv(normalise_RNAseq_leafcutter.out.qtlmap_tsv_input_ch.flatten()
-                .combine(tpm_quantile_ch), "leafcutter")
+            // add_to_qtlmap_input_tsv(normalise_RNAseq_leafcutter.out.qtlmap_tsv_input_ch.flatten()
+            //     .combine(median_tpm_file_ch), "leafcutter")
         }
     }
 }
@@ -196,7 +206,7 @@ process normalise_RNAseq_ge{
     output:
     path "*.gene_counts_cqn_norm.tsv"
     path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
-    path "*_median_tpm.tsv.gz"
+    path "*_median_tpm.tsv.gz", emit: median_tpm_file
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
 
     script:
@@ -220,7 +230,7 @@ process normalise_RNAseq_ge{
 process normalise_RNAseq_exon{
     publishDir "${params.publishDir}/exon", mode: 'copy'
     
-    label 'process_medium'
+    label 'process_high'
     container = 'kerimoff/eqtlutils:latest'
     
     input:
