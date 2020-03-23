@@ -57,6 +57,7 @@ quantile_tpm_path = opt$t
 filter_qc = opt$filter_qc
 eqtlutils_path = opt$eqtlutils
 keep_XY = opt$keep_XY
+tpm_threshold = 1
 
 message("######### Options: ######### ")
 message("######### Working Directory  : ", getwd())
@@ -69,6 +70,7 @@ message("######### opt_study_name     : ", study_name)
 message("######### filter_qc          : ", filter_qc)
 message("######### eqtlutils_path     : ", eqtlutils_path)
 message("######### keep_XY            : ", keep_XY)
+message("######### tpm_threshold      : ", tpm_threshold)
 
 
 #Load eQTLUtils
@@ -139,7 +141,7 @@ if (quant_method=="gene_counts") {
   close(gzfile)
   message("## Median tpm values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")))
   
-  eQTLUtils::studySEtoCountMatrices(se = cqn_norm, assay_name = "cqn", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  eQTLUtils::studySEtoCountMatrices(se = cqn_norm, assay_name = "cqn", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
   message("## Splitted count matrix according to qtl_group: ", output_dir)
 } else if (quant_method=="exon_counts") {
   cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se, "exon_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
@@ -148,7 +150,7 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised exon count matrix exported into: ", output_dir, study_name , ".exon_counts_cqn_norm.tsv")
   
-  eQTLUtils::studySEtoCountMatrices(se = cqn_norm, assay_name = "cqn", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  eQTLUtils::studySEtoCountMatrices(se = cqn_norm, assay_name = "cqn", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
   message("## Splitted count matrix according to qtl_group: ", output_dir)
 } else if (quant_method %in% c("transcript_usage", "txrevise")) {
   q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "txrevise", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
@@ -157,7 +159,7 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised transcript usage matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
   
-  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
   message("## Splitted count matrix according to qtl_group: ", output_dir)
 } else if (quant_method == "leafcutter") {
   q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "leafcutter", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
@@ -166,7 +168,7 @@ if (quant_method=="gene_counts") {
   
   message("## Normalised LeafCutter matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
   
-  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = 0.1)
+  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
   message("## Splitted bed files are exported to: ", output_dir)
 } else if (quant_method == "HumanHT-12_V4") {
   q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "HumanHT-12_V4", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
