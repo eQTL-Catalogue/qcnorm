@@ -162,7 +162,7 @@ process normalise_microarray{
     publishDir "${params.publishDir}/microarray", mode: 'copy'
     
     label 'process_medium'
-    container = 'kerimoff/eqtlutils:latest'
+    container = 'kauralasoo/eqtlutils:v0.3'
     
     input:
     path count_matrix
