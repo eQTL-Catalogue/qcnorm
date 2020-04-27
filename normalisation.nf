@@ -162,7 +162,7 @@ process normalise_microarray{
     publishDir "${params.publishDir}/microarray", mode: 'copy'
     
     label 'process_medium'
-    container = 'kauralasoo/eqtlutils:v0.3'
+    container = 'kauralasoo/eqtlutils:v0.4'
     
     input:
     path count_matrix
@@ -196,7 +196,7 @@ process normalise_RNAseq_ge{
         saveAs: {filename -> filename.indexOf("_tpm.tsv.gz") > 0 ? "../$filename" : "$filename"}
 
     label 'process_medium'
-    container = 'kauralasoo/eqtlutils:v0.3'
+    container = 'kauralasoo/eqtlutils:v0.4'
     
     input:
     path count_matrix
@@ -231,7 +231,7 @@ process normalise_RNAseq_exon{
     publishDir "${params.publishDir}/exon", mode: 'copy'
     
     label 'process_high'
-    container = 'kauralasoo/eqtlutils:v0.3'
+    container = 'kauralasoo/eqtlutils:v0.4'
     
     input:
     path count_matrix
@@ -266,7 +266,7 @@ process normalise_RNAseq_tx{
     publishDir "${params.publishDir}/tx", mode: 'copy'
     
     label 'process_medium'
-    container = 'kauralasoo/eqtlutils:v0.3'
+    container = 'kauralasoo/eqtlutils:v0.4'
     
     input:
     path count_matrix
@@ -301,7 +301,7 @@ process normalise_RNAseq_txrev{
     publishDir "${params.publishDir}/txrev", mode: 'copy'
     
     label 'process_medium'
-    container = 'kauralasoo/eqtlutils:v0.3'
+    container = 'kauralasoo/eqtlutils:v0.4'
     
     input:
     path count_matrix
@@ -336,7 +336,7 @@ process normalise_RNAseq_leafcutter{
     publishDir "${params.publishDir}/leafcutter", mode: 'copy'
     
     label 'process_medium'
-    container = 'kauralasoo/eqtlutils:v0.3'
+    container = 'kauralasoo/eqtlutils:v0.4'
     
     input:
     path count_matrix

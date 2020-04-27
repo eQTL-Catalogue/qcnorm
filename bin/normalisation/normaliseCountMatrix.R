@@ -40,11 +40,14 @@ suppressPackageStartupMessages(library("data.table"))
 #Debugging
 if (FALSE) {
   opt = list()
-  opt$c="data/counts/Alasoo_test_data/txrevise/"
-  opt$s="data/sample_metadata/Alasoo_2018.tsv"
-  opt$p="data/annotations/txrevise_Ensembl_96_phenotype_metadata.tsv.gz"
-  opt$q="txrevise"
-  opt$keep_XY="keep_XY"
+  opt$n = "CEDAR"
+  opt$c="../../testdata/CEDAR.tsv.gz"
+  opt$s="~/projects/SampleArcheology/studies/cleaned/CEDAR.tsv"
+  opt$p="~/annotations/eQTLCatalogue/v0.1/phenotype_metadata/HumanHT-12_V4_Ensembl_96_phenotype_metadata.tsv.gz"
+  opt$q="HumanHT-12_V4"
+  opt$o="test_out"
+  opt$keep_XY=FALSE
+  opt$filter_qc=TRUE
 }
 
 count_matrix_path = opt$c
@@ -110,10 +113,12 @@ if (quant_method == "txrevise") {
 
 message("## Make Summarized Experiment ##")
 se <- eQTLUtils::makeSummarizedExperimentFromCountMatrix(assay = data_fc, row_data = phenotype_meta, col_data = sample_metadata, quant_method = quant_method)
+dim(se)
 
 if (filter_qc){
   message("## Filter SummarizedExperiment by removing samples that fail QC ##")
   se <- eQTLUtils::filterSummarizedExperiment(se, filter_rna_qc = TRUE, filter_genotype_qc = TRUE)
+  dim(se)
 }
 
 if (!dir.exists(output_dir)){
