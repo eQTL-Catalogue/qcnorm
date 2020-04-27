@@ -196,7 +196,7 @@ process normalise_RNAseq_ge{
         saveAs: {filename -> filename.indexOf("_tpm.tsv.gz") > 0 ? "../$filename" : "$filename"}
 
     label 'process_medium'
-    container = 'kerimoff/eqtlutils:latest'
+    container = 'kauralasoo/eqtlutils:v0.3'
     
     input:
     path count_matrix
@@ -231,7 +231,7 @@ process normalise_RNAseq_exon{
     publishDir "${params.publishDir}/exon", mode: 'copy'
     
     label 'process_high'
-    container = 'kerimoff/eqtlutils:latest'
+    container = 'kauralasoo/eqtlutils:v0.3'
     
     input:
     path count_matrix
@@ -266,7 +266,7 @@ process normalise_RNAseq_tx{
     publishDir "${params.publishDir}/tx", mode: 'copy'
     
     label 'process_medium'
-    container = 'kerimoff/eqtlutils:latest'
+    container = 'kauralasoo/eqtlutils:v0.3'
     
     input:
     path count_matrix
@@ -301,7 +301,7 @@ process normalise_RNAseq_txrev{
     publishDir "${params.publishDir}/txrev", mode: 'copy'
     
     label 'process_medium'
-    container = 'kerimoff/eqtlutils:latest'
+    container = 'kauralasoo/eqtlutils:v0.3'
     
     input:
     path count_matrix
@@ -336,7 +336,7 @@ process normalise_RNAseq_leafcutter{
     publishDir "${params.publishDir}/leafcutter", mode: 'copy'
     
     label 'process_medium'
-    container = 'kauralasoo/eqtlutils:96d357d24e1b14e312298bdbd2deb0fd408660a3' //change it to more stable image
+    container = 'kauralasoo/eqtlutils:v0.3'
     
     input:
     path count_matrix
