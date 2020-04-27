@@ -63,7 +63,7 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
                     "${params.array_pheno_meta_path}\t" + 
                     "${params.sample_meta_path}\t" + 
                     "${params.vcf_file}\t" + 
-                    "" + '\n' ]
+                    "null.txt" + '\n' ]
                 }
                 .subscribe{ qtlmap_inputs_file.append(it.text) }
     }
