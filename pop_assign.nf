@@ -107,13 +107,13 @@ process removeFamilyFromRef{
 
     script:
     """
-    plink2 --bfile ref --remove-fam ids_to_remove.txt --make-bed --out ref
+    plink2 --bfile ref --remove-fam ids_to_remove.txt --make-bed --out ref_clean
 
     # finds dublicate vars
-    plink2 --bfile ref --list-duplicate-vars --out dubl
+    plink2 --bfile ref_clean --list-duplicate-vars --out dubl
 
     # delete dublicate vars
-    plink2 --bfile ref --exclude dubl.dupvar --snps-only --make-bed --out ref_no_dubl
+    plink2 --bfile ref_clean --exclude dubl.dupvar --snps-only --make-bed --out ref_no_dubl
     """
 }
 
