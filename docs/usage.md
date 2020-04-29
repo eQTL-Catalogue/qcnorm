@@ -1,3 +1,17 @@
+
+# Full pipeline on a microarray dataset
+
+```
+nextflow run main.nf -profile tartu_hpc -resume\
+ --study_name CEDAR\
+ --is_microarray\
+ --microarray_exp_matrix_path /gpfs/hpc/projects/eQTLCatalogue/processed/expression_matrices/HumanHT-12_V4/raw/CEDAR.tsv.gz\
+ --sample_meta_path /gpfs/hpc/projects/eQTLCatalogue/SampleArcheology/studies/cleaned/CEDAR.tsv\
+ --vcf_file /gpfs/hpc/projects/genomic_references/CEDAR/genotypes/Michigan_GRCh37_1KGPhase3_220918/GRCh38/CEDAR_GRCh38.filtered.renamed.vcf.gz\
+ --exclude_population\
+ --outdir HumanHT-12_V4
+```
+
 # Popassign
 
 ```
@@ -49,6 +63,7 @@ nextflow run normalisation.nf -profile tartu_hpc -resume\
  --study_name GEUVADIS_EUR\
  --quant_results_path /gpfs/hpc/home/a72094/projects/rnaseq/results/\
  --sample_meta_path /gpfs/hpc/projects/eQTLCatalogue/SampleArcheology/studies/cleaned/GEUVADIS_EUR.tsv\
+ --txrev_pheno_meta_path /gpfs/hpc/projects/genomic_references/annotations/txrevise/Homo_sapiens.GRCh38.96_CAGE_10bp/txrevise_Ensembl_96_CAGE_10bp_phenotype_metadata.tsv.gz\
  --skip_exon_norm\
  --skip_tx_norm\
  --skip_leafcutter_norm\
