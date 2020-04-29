@@ -62,7 +62,7 @@ process build_qc_report{
     publishDir "${params.outdir}/${params.study_name}/QC", mode: 'copy'
     
     label 'process_low'
-    container = 'kerimoff/qc_report:latest'
+    container = 'kauralasoo/eqtlutils:latest'
     
     input:
     path script_path
@@ -90,7 +90,7 @@ process build_qc_report{
     output_file = "${params.study_name}_QC_report.html",
     params = list(
         work_dir = work_dir,
-        set_title = "${params.study_name} QC report", 
+        set_title = "${params.study_name} QC report1", 
         set_author = "${params.author_name}",
         count_matrix_path = "$ge_count_matrix",
         sample_meta_path = "$sample_metadata",
