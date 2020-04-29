@@ -61,7 +61,6 @@ workflow quality_control {
 process build_qc_report{
     publishDir "${params.outdir}/${params.study_name}/QC", mode: 'copy'
     
-    label 'process_low'
     container = 'eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
