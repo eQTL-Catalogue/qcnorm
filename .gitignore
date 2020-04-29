@@ -7,3 +7,4 @@ singularity_img/
 .DS_Store
 test*
 *.pyc
+.Rhistory
