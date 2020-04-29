@@ -104,7 +104,7 @@ processed_se = eQTLUtils::filterSummarizedExperiment(se,
                                            filter_genotype_qc = TRUE) 
 
 
-processed_se = processed_se %>% eQTLUtils::array_normaliseSE(adjust_batch = TRUE)  
+processed_se = processed_se %>% eQTLUtils::array_normaliseSE2(adjust_batch = TRUE)  
 processed_se = processed_se[apply(SummarizedExperiment::assays(processed_se)$norm_exprs, 1, median) > 1, ]
 message("Number of phenotypes: ", processed_se %>% nrow())
 
