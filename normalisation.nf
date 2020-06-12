@@ -300,7 +300,6 @@ process normalise_RNAseq_tx{
 process normalise_RNAseq_txrev{
     publishDir "${params.publishDir}/txrev", mode: 'copy'
     
-    label 'process_medium'
     container = 'eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
