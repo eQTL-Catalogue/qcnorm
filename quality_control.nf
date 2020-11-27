@@ -61,7 +61,7 @@ workflow quality_control {
 process build_qc_report{
     publishDir "${params.outdir}/${params.study_name}/QC", mode: 'copy'
     
-    container = 'eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
     path script_path
