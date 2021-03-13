@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 params.publishDir="${params.outdir}/${params.study_name}/normalised"
 qtl_inputs_def_file = file("$baseDir/assets/qtlmap_inputs.tsv")
 qtl_inputs_def_file.copyTo("${params.outdir}/${params.study_name}/${params.study_name}_qtlmap_inputs.tsv")

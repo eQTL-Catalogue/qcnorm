@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
 params.num_pc = params.num_pc == null ? 3 : params.num_pc
 
