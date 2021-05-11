@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
 exp_matrix_path = params.is_microarray ? params.microarray_exp_matrix_path : 
                     params.quant_results_path ? "${params.quant_results_path}/featureCounts/merged_gene_counts.txt" : params.ge_exp_matrix_path
