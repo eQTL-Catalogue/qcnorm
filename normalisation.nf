@@ -71,7 +71,7 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
         qtlgroup_quantiletpm_ch
         .collectFile(storeDir:"${params.outdir}/${params.study_name}/qtl_group_inputs") { item ->
                     [ "${params.study_name}_${quant_method}_tsv_inputs.txt", 
-                    "${item[0].baseName}_${quant_method}\t" + 
+                    "${params.study_name}_${quant_method}_${item[0].baseName - params.study_name - '.'}\t" + 
                     "${params.publishDir}/${quant_method}/qtl_group_split_norm/${item[0].fileName}\t" + 
                     "${pheno_metadata_list[quant_method]}\t" + 
                     "${params.sample_meta_path}\t" + 
