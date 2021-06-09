@@ -165,7 +165,7 @@ process sampleVCftoBED{
     script:
     """
     #Convert VCF to plink
-    plink2 --vcf sample.vcf.gz --out sample_genotype --threads ${task.cpus}
+    plink2 --vcf sample.vcf.gz --out sample_genotype --threads ${task.cpus} --const-fid 
     plink2 --bfile sample_genotype --list-duplicate-vars --out list_dubl
     plink2 --bfile sample_genotype --exclude list_dubl.dupvar --snps-only --make-bed --out sample_genotype
 
