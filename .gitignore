@@ -1,10 +1,11 @@
 .nextflow*
 work/
 data/
-results/
+results*/
 reference_vcf_cache/
 singularity_img/
 .DS_Store
 test*
 *.pyc
 .Rhistory
+run*.sh
