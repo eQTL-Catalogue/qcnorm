@@ -47,7 +47,7 @@ process normalise_RNAseq_ge{
     path pheno_metadata
     
     output:
-    path "*.gene_counts_cqn_norm.tsv"
+    path "*.gene_counts_cqn_int_norm.tsv"
     path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
     path "*_median_tpm.tsv.gz", emit: median_tpm_file
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
@@ -83,7 +83,7 @@ process normalise_RNAseq_exon{
     path tpm_quantile
     
     output:
-    path "*.exon_counts_cqn_norm.tsv"
+    path "*.exon_counts_cqn_int_norm.tsv"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
 
     script:
