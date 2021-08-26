@@ -128,17 +128,19 @@ if (!dir.exists(output_dir)){
 message("## Starting normalisation process... ##")
 if (quant_method=="gene_counts") {
   cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se, "gene_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
-  cqn_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_norm)[["cqn"]]), assays(cqn_norm)[["cqn"]])
-  utils::write.table(cqn_assay_fc_formatted, file.path(output_dir, paste0(study_name ,".gene_counts_cqn_norm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")
   
-  message("## Normalised gene count matrix exported into: ", output_dir, study_name , ".gene_counts_cqn_norm.tsv")
+  cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
+  utils::write.table(cqn_int_assay_fc_formatted, file.path(output_dir, paste0(study_name ,".gene_counts_cqn_int_norm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  
+  message("## Normalised gene count matrix exported into: ", output_dir, study_name , ".gene_counts_cqn_int_norm.tsv")
   
   # message("## Caclulate median TPM in each biological context ##")
   median_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.5)
   gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")), "w")
   write.table(median_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
   close(gzfile)
-
+  
   # message("## Caclulate 95% quantile TPM in each biological context ##")
   quantile_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.95)
   gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_95quantile_tpm.tsv.gz")), "w")
@@ -146,16 +148,16 @@ if (quant_method=="gene_counts") {
   close(gzfile)
   message("## Median tpm values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")))
   
-  eQTLUtils::studySEtoCountMatrices(se = cqn_norm, assay_name = "cqn", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
+  eQTLUtils::studySEtoCountMatrices(se = cqn_int_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
   message("## Splitted count matrix according to qtl_group: ", output_dir)
 } else if (quant_method=="exon_counts") {
   cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se, "exon_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
-  cqn_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_norm)[["cqn"]]), assays(cqn_norm)[["cqn"]])
-  utils::write.table(cqn_assay_fc_formatted, file.path(output_dir, paste0(study_name ,".exon_counts_cqn_norm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")
+  cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
+  utils::write.table(cqn_int_assay_fc_formatted, file.path(output_dir, paste0(study_name ,".exon_counts_cqn_int_norm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  message("## Normalised exon count matrix exported into: ", output_dir, study_name , ".exon_counts_cqn_int_norm.tsv")
   
-  message("## Normalised exon count matrix exported into: ", output_dir, study_name , ".exon_counts_cqn_norm.tsv")
-  
-  eQTLUtils::studySEtoCountMatrices(se = cqn_norm, assay_name = "cqn", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
+  eQTLUtils::studySEtoCountMatrices(se = cqn_int_norm, assay_name = "qnorm", out_dir = output_dir, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
   message("## Splitted count matrix according to qtl_group: ", output_dir)
 } else if (quant_method %in% c("transcript_usage", "txrevise")) {
   q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "txrevise", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
@@ -185,4 +187,3 @@ if (quant_method=="gene_counts") {
   eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "norm_exprs", out_dir = output_dir)
   message("## Splitted bed files are exported to: ", output_dir)
 }
-
