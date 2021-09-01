@@ -8,6 +8,7 @@ nextflow run main.nf -profile tartu_hpc -resume\
 
 # Runs QC workflow only
 # (pop_assign have been run before and projections.tsv file is provided via pop_assign_projections parameter)
+# (MBV folder under "quant_results_path" is expected to be there with MBV files inside)
 nextflow run main.nf -profile tartu_hpc -resume\
  -entry qc_only\
  --study_name CommonMind\
@@ -15,6 +16,16 @@ nextflow run main.nf -profile tartu_hpc -resume\
  --pop_assign_projections /gpfs/space/home/kerimov/qcnorm_eqtlcat/results_test_CommonMind/CommonMind/pop_assign/projections_comb.tsv\
  --sample_meta_path /gpfs/space/home/kerimov/SampleArcheology/studies/cleaned/CommonMind.tsv\
  --outdir ./results_test_CommonMind
+
+# or with a specific path to gene_expression feature counts file
+# you can skip the MBV files directory when you don't use "quant_results_path" and use "ge_exp_matrix_path"
+nextflow run main.nf -profile tartu_hpc -resume\
+ -entry qc_only\
+ --study_name LCL_multi\
+ --ge_exp_matrix_path /gpfs/space/home/kerimov/multistudy_nf/results/metadata_and_fc_merged/joined_feature_counts.tsv\
+ --pop_assign_projections /gpfs/space/home/kerimov/qcnorm/results_multi_LCL_noAMR/LCL_multi/pop_assign/projections_comb.tsv\
+ --sample_meta_path /gpfs/space/home/kerimov/multistudy_nf/results/metadata_and_fc_merged/merged_metadata.tsv\
+ --outdir ./results_multi_LCL_qc
 
 # Runs normalisation workflow only
 nextflow run main.nf -profile tartu_hpc -resume\
