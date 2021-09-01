@@ -6,7 +6,7 @@ params:
   set_author: "Nurlan Kerimov"
   sample_meta_path: "/home/kerimov/work/SampleArcheology/studies/cleaned/BrainSeq.tsv"
   count_matrix_path: "/home/kerimov/work/feature_counts_QC/data/counts/BrainSeq/merged_gene_counts.txt"
-  mbv_files_dir: "/home/kerimov/work/feature_counts_QC/data/counts/BrainSeq/MBV/"
+  mbv_files_dir: ""
   projections: "/home/kerimov/work/feature_counts_QC/data/popAssign/results_BrainSeq/new_dataset_scores.profile.adj"
   phenotype_meta_path: "/home/kerimov/work/feature_counts_QC/data/annotations/gene_counts_Ensembl_96_phenotype_metadata.tsv.gz"
   eqtl_utils_path: null
@@ -19,13 +19,7 @@ title: `r params$set_title`
 author: `r params$set_author`
 ---
 
-- [PCA of gene expression data](#pca-of-gene-expression-data)
-- [MDS of gene expression data](#mds-of-gene-expression-data)
-- [Expression of sex-specific genes](#expression-of-sex-specific-genes)
-- [Assign genotyped individuals to populations](#assign-genotyped-individuals-to-populations)
-- [Concordance between expression and genotype data](#concordance-between-expression-and-genotype-data)
 
-***
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.height = 6, fig.width = 10, fig.align = "center")
 ```
@@ -58,6 +52,14 @@ if (!is.null(params$work_dir)){
    opts_knit$set(root.dir = params$work_dir)
 }
 ```
+
+- [PCA of gene expression data](#pca-of-gene-expression-data)
+- [MDS of gene expression data](#mds-of-gene-expression-data)
+- [Expression of sex-specific genes](#expression-of-sex-specific-genes)
+- [Assign genotyped individuals to populations](#assign-genotyped-individuals-to-populations)
+`r if(mbv_files_dir!=""){"- [Concordance between expression and genotype data](#concordance-between-expression-and-genotype-data)"}`
+
+***
 
 ```{r read_data, echo=FALSE}
 # Read the inputs
@@ -228,11 +230,11 @@ if (use_plotly) {
 ```
 
 
-### Concordance between expression and genotype data
+`r if(mbv_files_dir!=""){"### Concordance between expression and genotype data"}`
 
-Uses [QTLtools mbv](https://doi.org/10.1093/bioinformatics/btx074) (Match BAM to VCF) tool to check concordance between genotype data and genetic variants detected from the RNA-seq data. 
+`r if(mbv_files_dir!=""){"Uses [QTLtools mbv](https://doi.org/10.1093/bioinformatics/btx074) (Match BAM to VCF) tool to check concordance between genotype data and genetic variants detected from the RNA-seq data. "}`
 
-```{r mbv, echo=FALSE}
+```{r mbv, echo=FALSE, eval=mbv_files_dir!=""}
 mbv_results = eQTLUtils::mbvImportData(mbv_dir = mbv_files_dir, suffix = ".mbv_output.txt")
 best_matches = purrr::map_df(mbv_results, eQTLUtils::mbvFindBestMatch, .id = "sample_id") %>% dplyr::arrange(distance)
 mbv_meta = SummarizedExperiment::colData(se) %>% as.data.frame() %>% dplyr::as_tibble() %>% dplyr::select(sample_id, genotype_id)
@@ -244,7 +246,7 @@ message("Number of matching genotypes: ", which(best_matches$is_correct_match) %
 readr::write_tsv(x = best_matches, path = paste0(study_name, "_MBV_best_matches_matrix.tsv"), col_names = TRUE)
 ```
 
-```{r plot_mbv_con_hist, echo=FALSE, message=FALSE, warning=FALSE}
+```{r plot_mbv_con_hist, echo=FALSE, message=FALSE, warning=FALSE, eval=mbv_files_dir!=""}
 p1 <- ggplot(best_matches, aes(x=het_consistent_frac)) +
   geom_histogram(color="darkblue", fill="lightblue", bins = 40) +
   geom_vline(aes(xintercept=mean(het_consistent_frac)),
@@ -266,7 +268,7 @@ grid <- grid.arrange(p1, p2, ncol = 2, top="Histogram of concordant heterozygous
 ***
 
 
-```{r plot_mbv_dist_hist, echo=FALSE, message=FALSE, warning=FALSE}
+```{r plot_mbv_dist_hist, echo=FALSE, message=FALSE, warning=FALSE, eval=mbv_files_dir!=""}
 p1 <- ggplot(best_matches, aes(x=het_min_dist)) +
   geom_histogram(color="darkblue", fill="lightblue", bins = 40) +
   geom_vline(aes(xintercept=mean(het_min_dist)),

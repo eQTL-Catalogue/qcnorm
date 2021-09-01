@@ -9,3 +9,5 @@ test*
 *.pyc
 .Rhistory
 run*.sh
+submit_*.sh
+slurm-*.out

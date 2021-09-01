@@ -19,7 +19,7 @@ process build_qc_report{
     path "*matrix.tsv"
 
     script:
-    mbv_path = params.is_microarray ? "" : "mbv_files_dir = \"${params.mbv_path}\","
+    mbv_path = params.is_microarray || !params.mbv_path ? "" : "mbv_files_dir = \"${params.mbv_path}\","
     eqtl_utils_path = params.eqtl_utils_path ? "eqtl_utils_path = \"${params.eqtl_utils_path}\"," : ""
     """
     #!/usr/bin/env Rscript

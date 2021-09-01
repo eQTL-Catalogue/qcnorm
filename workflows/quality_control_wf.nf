@@ -5,8 +5,7 @@ exp_matrix_path = params.is_microarray ? params.microarray_exp_matrix_path :
                     params.quant_results_path ? "${params.quant_results_path}/featureCounts/merged_gene_counts.txt" : params.ge_exp_matrix_path
 
 if (!params.is_microarray) {
-    params.mbv_path = params.quant_results_path ? "${params.quant_results_path}/MBV" : 
-                        params.mbv_files_dir ? params.mbv_files_dir : { exit 1, "Error: Please provide --mbv_files_dir or --quant_results_path parameter. "}
+    params.mbv_path = params.quant_results_path ? "${params.quant_results_path}/MBV" : params.mbv_files_dir 
 }
 Channel.fromPath(exp_matrix_path, checkIfExists: true)
         .set { ge_count_matrix_ch }
