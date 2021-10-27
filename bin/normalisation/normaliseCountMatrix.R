@@ -40,13 +40,14 @@ suppressPackageStartupMessages(library("data.table"))
 #Debugging
 if (FALSE) {
   opt = list()
-  opt$n = "CEDAR"
-  opt$c="../../testdata/CEDAR.tsv.gz"
-  opt$s="~/projects/SampleArcheology/studies/cleaned/CEDAR.tsv"
-  opt$p="~/annotations/eQTLCatalogue/v0.1/phenotype_metadata/HumanHT-12_V4_Ensembl_96_phenotype_metadata.tsv.gz"
-  opt$q="HumanHT-12_V4"
-  opt$o="test_out"
-  opt$keep_XY=FALSE
+  opt$n = "GTEx"
+  opt$c="TPM/"
+  opt$s="GTEx.tsv"
+  opt$p="txrevise_Ensembl_96_phenotype_metadata.tsv.gz"
+  opt$q="txrevise"
+  opt$o="."
+  opt$t="GTEx_95quantile_tpm.tsv.gz"
+  opt$keep_XY=TRUE
   opt$filter_qc=TRUE
 }
 
@@ -121,70 +122,147 @@ if (filter_qc){
   dim(se)
 }
 
-if (!dir.exists(output_dir)){
-  dir.create(output_dir, recursive = TRUE)
+if (!dir.exists(paste0(output_dir, "/qtl_group_split_norm"))){
+  dir.create(paste0(output_dir, "/qtl_group_split_norm"), recursive = TRUE)
+}
+if (!dir.exists(paste0(output_dir, "/norm_not_filtered"))){
+  dir.create(paste0(output_dir, "/norm_not_filtered"), recursive = TRUE)
 }
 
-message("## Starting normalisation process... ##")
-if (quant_method=="gene_counts") {
-  cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se, "gene_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
-  cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")
+split_and_filter_by_qtlgroup <- function(norm_count_df, 
+                                         sample_metadata_df, 
+                                         phenotype_metadata,
+                                         qtl_group_selected,
+                                         study_name,
+                                         out_dir, 
+                                         quantile_tpms, 
+                                         tpm_thres) {
+  message("Processing qtl_group: ", qtl_group_selected)
   
-  cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
-  utils::write.table(cqn_int_assay_fc_formatted, file.path(output_dir, paste0(study_name ,".gene_counts_cqn_int_norm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  # extract genes which are expressed (TPM > tpm threshold)
+  expressed_genes <- quantile_tpms %>% 
+    dplyr::filter(qtl_group == qtl_group_selected, median_tpm > tpm_thres) %>% 
+    dplyr::pull(phenotype_id)
+  message("Expressed gene count by quantile TPM: ", length(expressed_genes))
   
-  message("## Normalised gene count matrix exported into: ", output_dir, "/", study_name , ".gene_counts_cqn_int_norm.tsv")
+  # extract the phenotype metadata of expressed genes
+  expressed_phenotype_metadata <- phenotype_metadata %>% 
+    dplyr::filter(gene_id %in% expressed_genes)
   
-  message("## Caclulate median TPM in each biological context ##")
-  median_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.5)
-  gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")), "w")
-  write.table(median_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
-  close(gzfile)
+  # extract sample_id's belonging to selected qtl_group_selected
+  qtl_group_samples = sample_metadata_df %>% 
+    dplyr::as_tibble() %>% 
+    dplyr::filter(qtl_group == qtl_group_selected) %>% 
+    dplyr::pull(sample_id)
   
-  message("## Caclulate 95% quantile TPM in each biological context ##")
-  quantile_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.95)
-  gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_95quantile_tpm.tsv.gz")), "w")
-  write.table(quantile_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
-  close(gzfile)
-  message("## Median tpm values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")))
+  message("Samples in qtl_group: ", length(qtl_group_samples))
   
-  eQTLUtils::studySEtoCountMatrices(se = cqn_int_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
-  message("## Splitted count matrix according to qtl_group: ", output_dir)
-} else if (quant_method=="exon_counts") {
-  cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se, "exon_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
-  cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")
-  cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
-  utils::write.table(cqn_int_assay_fc_formatted, file.path(output_dir, paste0(study_name ,".exon_counts_cqn_int_norm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-  message("## Normalised exon count matrix exported into: ", output_dir, study_name , ".exon_counts_cqn_int_norm.tsv")
+  # extract qtl_group samples and expressed phenotypes from normalised count matrix
+  counts_for_selected_qtl_group <- norm_count_df %>% 
+    dplyr::as_tibble() %>% 
+    dplyr::select(c("phenotype_id", qtl_group_samples)) %>% 
+    dplyr::filter(phenotype_id %in% expressed_phenotype_metadata$phenotype_id)
   
-  eQTLUtils::studySEtoCountMatrices(se = cqn_int_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
-  message("## Splitted count matrix according to qtl_group: ", output_dir)
-} else if (quant_method %in% c("transcript_usage", "txrevise")) {
-  q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "txrevise", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
-  qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
-  utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, paste0(study_name, "." , quant_method, "_qnorm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  message("Count of phenotypes for ", qtl_group_selected, " qtl_group is: ", nrow(counts_for_selected_qtl_group))
+  message("Count of samples for ", qtl_group_selected, " qtl_group is: ", ncol(counts_for_selected_qtl_group) - 1)
+  utils::write.table(x = counts_for_selected_qtl_group, 
+                     file = file.path(out_dir, "qtl_group_split_norm", paste0(study_name, ".", qtl_group_selected ,".tsv")), 
+                     sep = "\t", quote = FALSE, 
+                     row.names = FALSE, col.names = TRUE)
+  message("TPM filtered and splitted by qtl_group TSVs exported into: ", file.path(out_dir, "qtl_group_split_norm", paste0(study_name, ".", qtl_group_selected ,".tsv")))
+  message("______________________________________________________")
+}
+
+# Get unique qtl_group values
+qtl_groups_in_se <- se$qtl_group %>% base::unique()
+
+# Show sample sizes of each qtl_group
+table(se$qtl_group)
+
+for (qtl_group_in_se in qtl_groups_in_se) {
+  message("Normalising qtl_group: ", qtl_group_in_se)
   
-  message("## Normalised transcript usage matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
+  # Extract the se of selected qtl_group (qtl_group_in_se)
+  se_qtl_group <- se[,se$qtl_group == qtl_group_in_se]
+  dim(se_qtl_group)
   
-  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
-  message("## Splitted count matrix according to qtl_group: ", output_dir)
-} else if (quant_method == "leafcutter") {
-  q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "leafcutter", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
-  qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
-  utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, paste0(study_name, "." , quant_method, "_qnorm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-  
-  message("## Normalised LeafCutter matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
-  
-  eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
-  message("## Splitted bed files are exported to: ", output_dir)
-} else if (quant_method == "HumanHT-12_V4") {
-  q_norm <- eQTLUtils::qtltoolsPrepareSE(se, "HumanHT-12_V4", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
-  q_int_norm <- eQTLUtils::normaliseSE_quantile(q_norm, assay_name = "norm_exprs")
-  qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_int_norm)[["qnorm"]]), assays(q_int_norm)[["qnorm"]])
-  utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, paste0(study_name, "." , quant_method, "_norm_exprs.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-  
-  message("## Normalised HumanHT-12_V4 matrix exported to: ", output_dir, study_name, ".", quant_method, "_norm_exprs.tsv")
-  
-  eQTLUtils::studySEtoCountMatrices(se = q_int_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name)
-  message("## Splitted bed files are exported to: ", output_dir)
+  message("## Starting normalisation process... ##")
+  if (quant_method=="gene_counts") {
+    cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "gene_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
+    cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")
+    
+    cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
+    utils::write.table(cqn_int_assay_fc_formatted, file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_cqn_int_norm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    message("## Normalised gene count matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_cqn_int_norm.tsv")))
+    
+    message("## Caclulate median TPM in each biological context ##")
+    median_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.5)
+    gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")), "w")
+    write.table(median_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
+    close(gzfile)
+    
+    message("## Caclulate 95% quantile TPM in each biological context ##")
+    quantile_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.95)
+    gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_95quantile_tpm.tsv.gz")), "w")
+    write.table(quantile_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
+    close(gzfile)
+    message("## Median tpm values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")))
+    
+    split_and_filter_by_qtlgroup(norm_count_df = cqn_int_assay_fc_formatted, 
+                                 sample_metadata = SummarizedExperiment::colData(cqn_int_norm), 
+                                 phenotype_metadata = phenotype_meta, 
+                                 qtl_group_selected = qtl_group_in_se,
+                                 study_name = study_name, 
+                                 out_dir = output_dir, 
+                                 quantile_tpms = quantile_tpm_df, 
+                                 tpm_thres = tpm_threshold)
+  } else if (quant_method=="exon_counts") {
+    cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "exon_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
+    cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")
+    cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
+    utils::write.table(cqn_int_assay_fc_formatted, file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    message("## Normalised exon count matrix exported into: ", output_dir, "/norm_not_filtered/", study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv")
+    
+    split_and_filter_by_qtlgroup(norm_count_df = cqn_int_assay_fc_formatted, 
+                                 sample_metadata = SummarizedExperiment::colData(cqn_int_norm), 
+                                 phenotype_metadata = phenotype_meta,
+                                 qtl_group_selected = qtl_group_in_se,
+                                 study_name = study_name, 
+                                 out_dir = output_dir, 
+                                 quantile_tpms = quantile_tpm_df, 
+                                 tpm_thres = tpm_threshold)
+  } else if (quant_method %in% c("transcript_usage", "txrevise")) {
+    q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "txrevise", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
+    qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
+    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    message("## Normalised transcript usage matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv")))
+    
+    split_and_filter_by_qtlgroup(norm_count_df = qnorm_assay_fc_formatted, 
+                                 sample_metadata = SummarizedExperiment::colData(q_norm), 
+                                 phenotype_metadata = phenotype_meta,
+                                 qtl_group_selected = qtl_group_in_se,
+                                 study_name = study_name, 
+                                 out_dir = output_dir, 
+                                 quantile_tpms = quantile_tpm_df, 
+                                 tpm_thres = tpm_threshold)
+  } else if (quant_method == "leafcutter") {
+    q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "leafcutter", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
+    qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
+    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, paste0(study_name, "." , quant_method, "_qnorm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    
+    message("## Normalised LeafCutter matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
+    
+    eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
+    message("## Splitted bed files are exported to: ", output_dir)
+  } else if (quant_method == "HumanHT-12_V4") {
+    q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "HumanHT-12_V4", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
+    q_int_norm <- eQTLUtils::normaliseSE_quantile(q_norm, assay_name = "norm_exprs")
+    qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_int_norm)[["qnorm"]]), assays(q_int_norm)[["qnorm"]])
+    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, paste0(study_name, "." , quant_method, "_norm_exprs.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    
+    message("## Normalised HumanHT-12_V4 matrix exported to: ", output_dir, study_name, ".", quant_method, "_norm_exprs.tsv")
+    
+    eQTLUtils::studySEtoCountMatrices(se = q_int_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name)
+    message("## Splitted bed files are exported to: ", output_dir)
+  }
 }
