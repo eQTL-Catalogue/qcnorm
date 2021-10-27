@@ -38,7 +38,6 @@ process normalise_RNAseq_ge{
     publishDir "${params.publishDir}/ge", mode: 'copy',
         saveAs: {filename -> filename.indexOf("_tpm.tsv.gz") > 0 ? "../$filename" : "$filename"}
 
-    label 'process_medium'
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
@@ -47,7 +46,7 @@ process normalise_RNAseq_ge{
     path pheno_metadata
     
     output:
-    path "*.gene_counts_cqn_int_norm.tsv"
+    path "norm_not_filtered/*"
     path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
     path "*_median_tpm.tsv.gz", emit: median_tpm_file
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
@@ -73,7 +72,6 @@ process normalise_RNAseq_ge{
 process normalise_RNAseq_exon{
     publishDir "${params.publishDir}/exon", mode: 'copy'
     
-    label 'process_high'
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
@@ -83,7 +81,7 @@ process normalise_RNAseq_exon{
     path tpm_quantile
     
     output:
-    path "*.exon_counts_cqn_int_norm.tsv"
+    path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
 
     script:
@@ -108,7 +106,6 @@ process normalise_RNAseq_exon{
 process normalise_RNAseq_tx{
     publishDir "${params.publishDir}/tx", mode: 'copy'
     
-    label 'process_medium'
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
@@ -118,7 +115,7 @@ process normalise_RNAseq_tx{
     path tpm_quantile
     
     output:
-    path "*_qnorm.tsv"
+    path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
 
     script:
@@ -152,7 +149,7 @@ process normalise_RNAseq_txrev{
     path tpm_quantile
     
     output:
-    path "*_qnorm.tsv"
+    path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
 
     script:
