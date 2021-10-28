@@ -234,7 +234,7 @@ for (qtl_group_in_se in qtl_groups_in_se) {
   } else if (quant_method %in% c("transcript_usage", "txrevise")) {
     q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "txrevise", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
-    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)    
     message("## Normalised transcript usage matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv")))
     
     split_and_filter_by_qtlgroup(norm_count_df = qnorm_assay_fc_formatted, 
@@ -258,11 +258,8 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "HumanHT-12_V4", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     q_int_norm <- eQTLUtils::normaliseSE_quantile(q_norm, assay_name = "norm_exprs")
     qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_int_norm)[["qnorm"]]), assays(q_int_norm)[["qnorm"]])
-    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, paste0(study_name, "." , quant_method, "_norm_exprs.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, "qtl_group_split_norm", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_norm_exprs.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
     
-    message("## Normalised HumanHT-12_V4 matrix exported to: ", output_dir, study_name, ".", quant_method, "_norm_exprs.tsv")
-    
-    eQTLUtils::studySEtoCountMatrices(se = q_int_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name)
-    message("## Splitted bed files are exported to: ", output_dir)
+    message("## Normalised HumanHT-12_V4 matrix exported to: ", file.path(output_dir, "qtl_group_split_norm", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_norm_exprs.tsv")))
   }
 }

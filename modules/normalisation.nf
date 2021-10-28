@@ -13,7 +13,6 @@ process normalise_microarray{
     path pheno_metadata
     
     output:
-    path "*_norm_exprs.tsv"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
 
     script:
