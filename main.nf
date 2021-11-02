@@ -42,6 +42,13 @@ workflow qc_and_norm {
     quality_control(Channel.fromPath(params.pop_assign_projections, checkIfExists: true))
     normalise()
 }
+
+workflow norm_only_with_tsv {
+    include {normalise} from './workflows/normalisation_multi_wf' params(params)
+
+    normalise()
+}
+
 workflow {
     if(params.study_name=="") {exit 1, "Error: Please provide --study_name parameter. "} 
 
