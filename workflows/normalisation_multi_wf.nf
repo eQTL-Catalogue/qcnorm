@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
-// params.publishDir="${params.outdir}/${params.study_name}/normalised"
 qtl_inputs_def_file = file("$baseDir/assets/qtlmap_inputs.tsv")
 qtl_inputs_def_file.copyTo("${params.outdir}/qtlmap_inputs.tsv")
 qtlmap_inputs_file = file("${params.outdir}/qtlmap_inputs.tsv")
@@ -13,7 +12,7 @@ pheno_metadata_list = [
     "microarray": params.array_pheno_meta_path
 ]
 
-//run_id	study_name	quant_results_path	sample_meta_path	vcf_file	outdir
+//run_id	study_name	quant_results_path	sample_meta_path	vcf_file
 Channel.fromPath(params.input_tsv)
     .ifEmpty { error "Cannot find input_tsv file in: ${params.input_tsv}" }
     .splitCsv(header: true, sep: '\t', strip: true)
@@ -28,14 +27,12 @@ Channel.fromPath(params.input_tsv)
 
 include { normalise_microarray; normalise_RNAseq_ge ; normalise_RNAseq_exon ; normalise_RNAseq_tx ; normalise_RNAseq_txrev } from  '../modules/normalisation_multi'
 
-// qtl_subset	count_matrix	pheno_meta	sample_meta	vcf	tpm_file	covariates_file
-// GTEx_ge_adipose_subcutaneous	/gpfs/space/projects/eQTLCatalogue/qcnorm/GTEx_v8_norm/group_1/GTEx/normalised/ge/qtl_group_split_norm/GTEx.adipose_subcutaneous.tsv	/gpfs/space/projects/genomic_references/annotations/eQTLCatalogue/v0.1/phenotype_metadata/gene_counts_Ensembl_96_phenotype_metadata.tsv.gz	/gpfs/space/projects/eQTLCatalogue/SampleArcheology/studies/cleaned/GTEx.tsv	/gpfs/space/projects/GTEx/genotypes/processed/GTEx.DS_added.filtered.vcf.gz	/gpfs/space/projects/eQTLCatalogue/qcnorm/GTEx_v8_norm/group_1/GTEx/normalised/GTEx_median_tpm.tsv.gz
 def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
     // item[0] : run_id
     // item[1] : study_name
     // item[2] : sample_meta_path
     // item[3] : vcf_file
-    // item[4] : median_tpm_file
+    // item[4] : median_tpm_file (for microarray normalised_splitted_count_matrix)
     // item[5] : normalised_splitted_count_matrix
     
     if (quant_method=="microarray"){
