@@ -16,7 +16,7 @@ process normalise_RNAseq_ge{
     path "norm_not_filtered/*"
     path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
     tuple val(run_id), file("*_median_tpm.tsv.gz"), emit: median_tpm_file
-    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    tuple val(run_id), file("qtl_group_split_norm/*"), emit: qtlmap_tsv_input_ch
     tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file("*_95quantile_tpm.tsv.gz"), emit: inputs_with_quant_tpm_ch
 
     script:
@@ -48,7 +48,7 @@ process normalise_RNAseq_exon{
 
     output:
     path "norm_not_filtered/*"
-    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    tuple val(run_id), file("qtl_group_split_norm/*"), emit: qtlmap_tsv_input_ch
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -80,7 +80,7 @@ process normalise_RNAseq_tx{
     
     output:
     path "norm_not_filtered/*"
-    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    tuple val(run_id), file("qtl_group_split_norm/*"), emit: qtlmap_tsv_input_ch
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -112,7 +112,7 @@ process normalise_RNAseq_txrev{
     
     output:
     path "norm_not_filtered/*"
-    path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    tuple val(run_id), file("qtl_group_split_norm/*"), emit: qtlmap_tsv_input_ch
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""

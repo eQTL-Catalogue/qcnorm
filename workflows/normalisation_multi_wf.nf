@@ -59,7 +59,7 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
                     "${pheno_metadata_list[quant_method]}\t" + 
                     "${item[2]}\t" + 
                     "${item[3]}\t" + 
-                    "${params.outdir}/${item[0]}/${item[1]}/normalised/${item[5].fileName}" + '\n' ]
+                    "${params.outdir}/${item[0]}/${item[1]}/normalised/${item[4].fileName}" + '\n' ]
                 }
                 .subscribe{ qtlmap_inputs_file.append(it.text) }
     }
@@ -74,24 +74,27 @@ workflow normalise {
     
     add_to_qtlmap_input_tsv(output_tsv_ch
         .join(normalise_RNAseq_ge.out.median_tpm_file)
-        .combine(normalise_RNAseq_ge.out.qtlmap_tsv_input_ch.flatten()).view(), "ge")
+        .combine(normalise_RNAseq_ge.out.qtlmap_tsv_input_ch, by: 0).transpose(), "ge")
     
     if (!params.skip_exon_norm) {
         normalise_RNAseq_exon(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.exon_pheno_meta_path, checkIfExists: true).collect())
-
-        // add_to_qtlmap_input_tsv(normalise_RNAseq_exon.out.qtlmap_tsv_input_ch.flatten()
-        //     .combine(median_tpm_file_ch), "exon")
+    
+        add_to_qtlmap_input_tsv(output_tsv_ch
+            .join(normalise_RNAseq_ge.out.median_tpm_file)
+            .combine(normalise_RNAseq_exon.out.qtlmap_tsv_input_ch, by: 0).transpose(), "exon")
     }
     if (!params.skip_tx_norm) {
         normalise_RNAseq_tx(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.tx_pheno_meta_path, checkIfExists: true).collect())
 
-        // add_to_qtlmap_input_tsv(normalise_RNAseq_tx.out.qtlmap_tsv_input_ch.flatten()
-        //     .combine(median_tpm_file_ch), "tx")
+        add_to_qtlmap_input_tsv(output_tsv_ch
+            .join(normalise_RNAseq_ge.out.median_tpm_file)
+            .combine(normalise_RNAseq_tx.out.qtlmap_tsv_input_ch, by: 0).transpose(), "tx")
     } 
     if (!params.skip_txrev_norm) {
         normalise_RNAseq_txrev(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.txrev_pheno_meta_path, checkIfExists: true).collect())
 
-        // add_to_qtlmap_input_tsv(normalise_RNAseq_txrev.out.qtlmap_tsv_input_ch.flatten()
-        //     .combine(median_tpm_file_ch), "txrev")
+        add_to_qtlmap_input_tsv(output_tsv_ch
+            .join(normalise_RNAseq_ge.out.median_tpm_file)
+            .combine(normalise_RNAseq_txrev.out.qtlmap_tsv_input_ch, by: 0).transpose(), "txrev")
     }
 }
