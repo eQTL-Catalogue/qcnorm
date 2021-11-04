@@ -9,7 +9,8 @@ pheno_metadata_list = [
     "ge": params.ge_pheno_meta_path,
     "exon": params.exon_pheno_meta_path,
     "tx": params.tx_pheno_meta_path,
-    "txrev": params.txrev_pheno_meta_path
+    "txrev": params.txrev_pheno_meta_path,
+    "microarray": params.array_pheno_meta_path
 ]
 
 //run_id	study_name	quant_results_path	sample_meta_path	vcf_file	outdir
@@ -25,7 +26,7 @@ Channel.fromPath(params.input_tsv)
     .map{row -> [ row.run_id, row.study_name, row.sample_meta_path, row.vcf_file ]}
     .set { output_tsv_ch }
 
-include { normalise_RNAseq_ge ; normalise_RNAseq_exon ; normalise_RNAseq_tx ; normalise_RNAseq_txrev } from  '../modules/normalisation_multi'
+include { normalise_microarray; normalise_RNAseq_ge ; normalise_RNAseq_exon ; normalise_RNAseq_tx ; normalise_RNAseq_txrev } from  '../modules/normalisation_multi'
 
 // qtl_subset	count_matrix	pheno_meta	sample_meta	vcf	tpm_file	covariates_file
 // GTEx_ge_adipose_subcutaneous	/gpfs/space/projects/eQTLCatalogue/qcnorm/GTEx_v8_norm/group_1/GTEx/normalised/ge/qtl_group_split_norm/GTEx.adipose_subcutaneous.tsv	/gpfs/space/projects/genomic_references/annotations/eQTLCatalogue/v0.1/phenotype_metadata/gene_counts_Ensembl_96_phenotype_metadata.tsv.gz	/gpfs/space/projects/eQTLCatalogue/SampleArcheology/studies/cleaned/GTEx.tsv	/gpfs/space/projects/GTEx/genotypes/processed/GTEx.DS_added.filtered.vcf.gz	/gpfs/space/projects/eQTLCatalogue/qcnorm/GTEx_v8_norm/group_1/GTEx/normalised/GTEx_median_tpm.tsv.gz
@@ -39,13 +40,13 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
     
     if (quant_method=="microarray"){
         qtlgroup_quantiletpm_ch
-        .collectFile(storeDir:"${params.outdir}/${params.study_name}/qtl_group_inputs") { item ->
-                    [ "${params.study_name}_${quant_method}_tsv_inputs.txt", 
-                    "${params.study_name}_${quant_method}_${item.baseName - params.study_name - '.'}\t" + 
-                    "${params.publishDir}/${quant_method}/qtl_group_split_norm/${item.fileName}\t" + 
-                    "${params.array_pheno_meta_path}\t" + 
-                    "${params.sample_meta_path}\t" + 
-                    "${params.vcf_file}\t" + 
+        .collectFile(storeDir:"${params.outdir}/qtl_group_inputs") { item ->
+                    [ "${item[0]}_${item[1]}_${quant_method}_tsv_inputs.txt", 
+                    "${item[1]}_${quant_method}_${item[4].baseName - item[1] - '.'}\t" + 
+                    "${params.outdir}/${item[0]}/${item[1]}/normalised/${quant_method}/qtl_group_split_norm/${item[4].fileName}\t" + 
+                    "${pheno_metadata_list[quant_method]}\t" + 
+                    "${item[2]}\t" + 
+                    "${item[3]}\t" + 
                     "null.txt" + '\n' ]
                 }
                 .subscribe{ qtlmap_inputs_file.append(it.text) }
@@ -70,31 +71,39 @@ workflow {
 }
 
 workflow normalise {
-    normalise_RNAseq_ge(study_file_ge_ch, Channel.fromPath(params.ge_pheno_meta_path, checkIfExists: true).collect())
-    
-    add_to_qtlmap_input_tsv(output_tsv_ch
-        .join(normalise_RNAseq_ge.out.median_tpm_file)
-        .combine(normalise_RNAseq_ge.out.qtlmap_tsv_input_ch, by: 0).transpose(), "ge")
-    
-    if (!params.skip_exon_norm) {
-        normalise_RNAseq_exon(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.exon_pheno_meta_path, checkIfExists: true).collect())
-    
+    if (params.is_microarray){
+        normalise_microarray(study_file_ge_ch, Channel.fromPath(params.array_pheno_meta_path, checkIfExists: true).collect())
+
         add_to_qtlmap_input_tsv(output_tsv_ch
-            .join(normalise_RNAseq_ge.out.median_tpm_file)
-            .combine(normalise_RNAseq_exon.out.qtlmap_tsv_input_ch, by: 0).transpose(), "exon")
+            .combine(normalise_microarray.out.qtlmap_tsv_input_ch, by: 0).transpose(), "microarray")
     }
-    if (!params.skip_tx_norm) {
-        normalise_RNAseq_tx(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.tx_pheno_meta_path, checkIfExists: true).collect())
-
+    else {
+        normalise_RNAseq_ge(study_file_ge_ch, Channel.fromPath(params.ge_pheno_meta_path, checkIfExists: true).collect())
+        
         add_to_qtlmap_input_tsv(output_tsv_ch
             .join(normalise_RNAseq_ge.out.median_tpm_file)
-            .combine(normalise_RNAseq_tx.out.qtlmap_tsv_input_ch, by: 0).transpose(), "tx")
-    } 
-    if (!params.skip_txrev_norm) {
-        normalise_RNAseq_txrev(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.txrev_pheno_meta_path, checkIfExists: true).collect())
+            .combine(normalise_RNAseq_ge.out.qtlmap_tsv_input_ch, by: 0).transpose(), "ge")
+        
+        if (!params.skip_exon_norm) {
+            normalise_RNAseq_exon(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.exon_pheno_meta_path, checkIfExists: true).collect())
+        
+            add_to_qtlmap_input_tsv(output_tsv_ch
+                .join(normalise_RNAseq_ge.out.median_tpm_file)
+                .combine(normalise_RNAseq_exon.out.qtlmap_tsv_input_ch, by: 0).transpose(), "exon")
+        }
+        if (!params.skip_tx_norm) {
+            normalise_RNAseq_tx(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.tx_pheno_meta_path, checkIfExists: true).collect())
 
-        add_to_qtlmap_input_tsv(output_tsv_ch
-            .join(normalise_RNAseq_ge.out.median_tpm_file)
-            .combine(normalise_RNAseq_txrev.out.qtlmap_tsv_input_ch, by: 0).transpose(), "txrev")
+            add_to_qtlmap_input_tsv(output_tsv_ch
+                .join(normalise_RNAseq_ge.out.median_tpm_file)
+                .combine(normalise_RNAseq_tx.out.qtlmap_tsv_input_ch, by: 0).transpose(), "tx")
+        } 
+        if (!params.skip_txrev_norm) {
+            normalise_RNAseq_txrev(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, Channel.fromPath(params.txrev_pheno_meta_path, checkIfExists: true).collect())
+
+            add_to_qtlmap_input_tsv(output_tsv_ch
+                .join(normalise_RNAseq_ge.out.median_tpm_file)
+                .combine(normalise_RNAseq_txrev.out.qtlmap_tsv_input_ch, by: 0).transpose(), "txrev")
+        }
     }
 }

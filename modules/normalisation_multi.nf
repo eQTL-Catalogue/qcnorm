@@ -1,6 +1,36 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
+process normalise_microarray{
+    publishDir "${params.outdir}/$run_id/$study_name/normalised/microarray", mode: 'copy', pattern: "qtl_group_split_norm/*"
+    
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    
+    input:
+    tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata)
+    path pheno_metadata
+    
+    output:
+    tuple val(run_id), file("qtl_group_split_norm/*"), emit: qtlmap_tsv_input_ch
+
+    script:
+    filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
+    keep_XY = params.norm_keep_XY ? "--keep_XY TRUE" : ""
+    eqtl_utils_path = params.eqtl_utils_path ? "--eqtlutils ${params.eqtl_utils_path}" : ""
+    """
+    Rscript $baseDir/bin/normalisation/normaliseCountMatrix.R\
+      -c $quant_results_path\
+      -s $sample_metadata\
+      -p $pheno_metadata\
+      -o .\
+      -q HumanHT-12_V4\
+      $filter_qc\
+      $keep_XY\
+      $eqtl_utils_path
+
+    """
+}
+
 process normalise_RNAseq_ge{
     publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "norm_not_filtered/*"
     publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "qtl_group_split_norm/*"
