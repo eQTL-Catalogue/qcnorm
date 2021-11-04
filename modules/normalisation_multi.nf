@@ -2,22 +2,22 @@
 nextflow.enable.dsl=2
 
 process normalise_RNAseq_ge{
-    publishDir "$outdir/$study_name/normalised/ge", mode: 'copy', pattern: "norm_not_filtered/*"
-    publishDir "$outdir/$study_name/normalised/ge", mode: 'copy', pattern: "qtl_group_split_norm/*"
-    publishDir "$outdir/$study_name/normalised/", mode: 'copy', pattern: "*_tpm.tsv.gz"
+    publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "norm_not_filtered/*"
+    publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "qtl_group_split_norm/*"
+    publishDir "${params.outdir}/$run_id/$study_name/normalised/", mode: 'copy', pattern: "*_tpm.tsv.gz"
 
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
-    tuple val(study_name), file(quant_results_path), file(sample_metadata), file(vcf_file), val(outdir)
+    tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata)
     path pheno_metadata
     
     output:
     path "norm_not_filtered/*"
     path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
-    path "*_median_tpm.tsv.gz", emit: median_tpm_file
+    tuple val(run_id), file("*_median_tpm.tsv.gz"), emit: median_tpm_file
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
-    tuple val(study_name), file(quant_results_path), file(sample_metadata), file(vcf_file), val(outdir), file("*_95quantile_tpm.tsv.gz"), emit: inputs_with_quant_tpm_ch
+    tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file("*_95quantile_tpm.tsv.gz"), emit: inputs_with_quant_tpm_ch
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -38,12 +38,12 @@ process normalise_RNAseq_ge{
 }
 
 process normalise_RNAseq_exon{
-    publishDir "$outdir/$study_name/normalised/exon", mode: 'copy'
+    publishDir "${params.outdir}/$run_id/$study_name/normalised/exon", mode: 'copy'
     
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
-    tuple val(study_name), file(quant_results_path), file(sample_metadata), file(vcf_file), val(outdir), file(tpm_quantile)
+    tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file(tpm_quantile)
     path pheno_metadata
 
     output:
@@ -70,12 +70,12 @@ process normalise_RNAseq_exon{
 }
 
 process normalise_RNAseq_tx{
-    publishDir "$outdir/$study_name/normalised/tx", mode: 'copy'
+    publishDir "${params.outdir}/$run_id/$study_name/normalised/tx", mode: 'copy'
     
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
-    tuple val(study_name), file(quant_results_path), file(sample_metadata), file(vcf_file), val(outdir), file(tpm_quantile)
+    tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file(tpm_quantile)
     path pheno_metadata
     
     output:
@@ -102,12 +102,12 @@ process normalise_RNAseq_tx{
 }
 
 process normalise_RNAseq_txrev{
-    publishDir "$outdir/$study_name/normalised/txrev", mode: 'copy'
+    publishDir "${params.outdir}/$run_id/$study_name/normalised/txrev", mode: 'copy'
     
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
     input:
-    tuple val(study_name), file(quant_results_path), file(sample_metadata), file(vcf_file), val(outdir), file(tpm_quantile)
+    tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file(tpm_quantile)
     path pheno_metadata
     
     output:
