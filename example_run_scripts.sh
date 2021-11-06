@@ -65,3 +65,20 @@ nextflow run main.nf -profile tartu_hpc -resume\
  --sample_meta_path /gpfs/space/home/kerimov/SampleArcheology/studies/cleaned/CommonMind.tsv\
  --skip_leafcutter_norm\
  --outdir ./results_test_CommonMind
+
+# Runs normalisation with input.tsv rnaseq
+nextflow run main.nf -profile tartu_hpc -resume\
+ -entry norm_only_with_tsv\
+ --input_tsv /gpfs/space/home/kerimov/qcnorm_fast/input_tsv.tsv\
+ --exclude_population\
+ --skip_leafcutter_norm\
+ --norm_keep_XY\
+ --outdir /gpfs/space/home/kerimov/qcnorm_fast/results_GTEx_all
+ 
+ # Runs normalisation for microarray data using tsv input
+ nextflow run main.nf -profile tartu_hpc -resume\
+   -entry norm_only_with_tsv\
+   --input_tsv /gpfs/space/home/kerimov/qcnorm_fast/input_tsv_ma.tsv\
+   --is_microarray\
+   --norm_keep_XY\
+   --outdir eQTL_Catalogue_r5_ma
