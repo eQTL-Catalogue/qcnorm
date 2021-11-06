@@ -1,0 +1,3 @@
+run_id	study_name	quant_results_path	sample_meta_path	vcf_file
+GTEx_17	GTEx	/gpfs/space/projects/GTEx/rnaseq/group_17/	/gpfs/space/projects/eQTLCatalogue/SampleArcheology/studies/cleaned/GTEx.tsv	/gpfs/space/projects/GTEx/genotypes/processed/GTEx.DS_added.filtered.vcf.gz
+GTEx_1	GTEx	/gpfs/space/projects/GTEx/rnaseq/group_1/	/gpfs/space/projects/eQTLCatalogue/SampleArcheology/studies/cleaned/GTEx.tsv	/gpfs/space/projects/GTEx/genotypes/processed/GTEx.DS_added.filtered.vcf.gz
