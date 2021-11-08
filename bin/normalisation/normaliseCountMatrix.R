@@ -179,6 +179,11 @@ qtl_groups_in_se <- se$qtl_group %>% base::unique()
 # Show sample sizes of each qtl_group
 table(se$qtl_group)
 
+# Create empty dataframes to collect quantile and median TPM values from 
+# different qtl_groups within the study
+merged_median_tpm_df <- base::data.frame()
+merged_95quantile_tpm_df <- base::data.frame()
+
 for (qtl_group_in_se in qtl_groups_in_se) {
   message("Normalising qtl_group: ", qtl_group_in_se)
   
@@ -197,16 +202,18 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     
     message("## Caclulate median TPM in each biological context ##")
     median_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.5)
-    gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")), "w")
-    write.table(median_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
-    close(gzfile)
+    # gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")), "w")
+    # write.table(median_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
+    # close(gzfile)
+    merged_median_tpm_df <- merged_median_tpm_df %>% base::rbind(median_tpm_df)
     
     message("## Caclulate 95% quantile TPM in each biological context ##")
     quantile_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.95)
-    gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_95quantile_tpm.tsv.gz")), "w")
-    write.table(quantile_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
-    close(gzfile)
-    message("## Median tpm values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")))
+    # gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_95quantile_tpm.tsv.gz")), "w")
+    # write.table(quantile_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
+    # close(gzfile)
+    # message("## Median tpm values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")))
+    merged_95quantile_tpm_df <- merged_95quantile_tpm_df %>% base::rbind(quantile_tpm_df)
     
     split_and_filter_by_qtlgroup(norm_count_df = cqn_int_assay_fc_formatted, 
                                  sample_metadata = SummarizedExperiment::colData(cqn_int_norm), 
@@ -262,4 +269,16 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     
     message("## Normalised HumanHT-12_V4 matrix exported to: ", file.path(output_dir, "qtl_group_split_norm", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_norm_exprs.tsv")))
   }
+}
+
+if (quant_method=="gene_counts") {
+  gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")), "w")
+  write.table(merged_median_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
+  close(gzfile)
+  message("## Median TPM values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_median_tpm.tsv.gz")))
+  
+  gzfile = gzfile(file.path(output_dir, paste0(study_name ,"_95quantile_tpm.tsv.gz")), "w")
+  write.table(merged_95quantile_tpm_df, gzfile, sep = "\t", row.names = F, quote = F)
+  close(gzfile)
+  message("## Quantile TPM values matrix exported into: ", file.path(output_dir, paste0(study_name ,"_95quantile_tpm.tsv.gz")))
 }
