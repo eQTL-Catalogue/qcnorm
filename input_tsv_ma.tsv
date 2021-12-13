@@ -1,0 +1,2 @@
+run_id	study_name	quant_results_path	sample_meta_path	vcf_file
+CEDAR_run1	CEDAR	/gpfs/space/projects/eQTLCatalogue/processed/expression_matrices/HumanHT-12_V4/raw/CEDAR.tsv.gz	/gpfs/space/projects/eQTLCatalogue/SampleArcheology/studies/cleaned/CEDAR.tsv	/gpfs/space/projects/genomic_references/CEDAR/genotypes/genimpute_200921/minimac_out/filtered/CEDAR.filtered.vcf.gz
