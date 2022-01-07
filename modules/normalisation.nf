@@ -184,10 +184,9 @@ process normalise_RNAseq_leafcutter{
     path tpm_quantile
     
     output:
-    path "*_qnorm.tsv"
-    path "leafcutter_metadata.txt.gz"
+    path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
-    // TODO: Test leafcutter behaviour. never tested
+    path "leafcutter_metadata.txt.gz"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""

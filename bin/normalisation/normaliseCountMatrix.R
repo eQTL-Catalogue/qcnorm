@@ -255,12 +255,17 @@ for (qtl_group_in_se in qtl_groups_in_se) {
   } else if (quant_method == "leafcutter") {
     q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "leafcutter", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
-    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, paste0(study_name, "." , quant_method, "_qnorm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    utils::write.table(qnorm_assay_fc_formatted, file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv")), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)    
+    message("## Normalised transcript usage matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv")))
     
-    message("## Normalised LeafCutter matrix exported into: ", output_dir, study_name, ".", quant_method, "_qnorm.tsv")
-    
-    eQTLUtils::studySEtoCountMatrices(se = q_norm, assay_name = "qnorm", out_dir = output_dir, study_name = study_name, quantile_tpms = quantile_tpm_df, tpm_thres = tpm_threshold)
-    message("## Splitted bed files are exported to: ", output_dir)
+    split_and_filter_by_qtlgroup(norm_count_df = qnorm_assay_fc_formatted, 
+                                 sample_metadata = SummarizedExperiment::colData(q_norm), 
+                                 phenotype_metadata = phenotype_meta,
+                                 qtl_group_selected = qtl_group_in_se,
+                                 study_name = study_name, 
+                                 out_dir = output_dir, 
+                                 quantile_tpms = quantile_tpm_df, 
+                                 tpm_thres = tpm_threshold)
   } else if (quant_method == "HumanHT-12_V4") {
     q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "HumanHT-12_V4", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     q_int_norm <- eQTLUtils::normaliseSE_quantile(q_norm, assay_name = "norm_exprs")

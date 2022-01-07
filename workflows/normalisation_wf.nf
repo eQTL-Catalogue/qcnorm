@@ -158,8 +158,8 @@ workflow normalise {
                 Channel.fromPath(params.leafcutter_intron_annotation, checkIfExists: true),
                 tpm_quantile_ch)
 
-            // add_to_qtlmap_input_tsv(normalise_RNAseq_leafcutter.out.qtlmap_tsv_input_ch.flatten()
-            //     .combine(median_tpm_file_ch), "leafcutter")
+            add_to_qtlmap_input_tsv(normalise_RNAseq_leafcutter.out.qtlmap_tsv_input_ch.flatten()
+                .combine(median_tpm_file_ch), "leafcutter")
         }
     }
 }
