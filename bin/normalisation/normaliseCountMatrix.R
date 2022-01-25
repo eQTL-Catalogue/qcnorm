@@ -40,11 +40,11 @@ suppressPackageStartupMessages(library("data.table"))
 #Debugging
 if (FALSE) {
   opt = list()
-  opt$n = "CAP"
-  opt$c="/Users/kerimov/Work/temp_files/Kristas/merged_gene_counts.txt"
-  opt$s="/Users/kerimov/Work/temp_files/Kristas/CAP_filt_BIG_LCL_metadata.tsv"
-  opt$p="/Users/kerimov/Work/temp_files/phenotype_metadata/gene_counts_Ensembl_96_phenotype_metadata.tsv.gz"
-  opt$q="gene_counts"
+  opt$n = "GTEx"
+  opt$c="TPM/"
+  opt$s="GTEx.tsv"
+  opt$p="txrevise_Ensembl_96_phenotype_metadata.tsv.gz"
+  opt$q="txrevise"
   opt$o="."
   opt$t="GTEx_95quantile_tpm.tsv.gz"
   opt$keep_XY=TRUE
