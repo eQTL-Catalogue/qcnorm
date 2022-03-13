@@ -118,7 +118,7 @@ process normalise_RNAseq_tx{
     eqtl_utils_path = params.eqtl_utils_path ? "--eqtlutils ${params.eqtl_utils_path}" : ""
     """
     Rscript $baseDir/bin/normalisation/normaliseCountMatrix.R\
-      -c $quant_results_path/Salmon/merged_counts/TPM/gencode.v30.transcripts.TPM.merged.txt\
+      -c $quant_results_path/Salmon/merged_counts/TPM/gencode.v39.transcripts.TPM.merged.txt\
       -s $sample_metadata\
       -p $pheno_metadata\
       -o .\
