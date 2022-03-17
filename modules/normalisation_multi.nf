@@ -55,7 +55,7 @@ process normalise_RNAseq_ge{
     eqtl_utils_path = params.eqtl_utils_path ? "--eqtlutils ${params.eqtl_utils_path}" : ""
     """
     Rscript $baseDir/bin/normalisation/normaliseCountMatrix.R\
-      -c $quant_results_path/featureCounts/merged_gene_counts.txt\
+      -c $quant_results_path/featureCounts/merged_gene_counts.tsv.gz\
       -s $sample_metadata\
       -p $pheno_metadata\
       -o .\
@@ -86,7 +86,7 @@ process normalise_RNAseq_exon{
     eqtl_utils_path = params.eqtl_utils_path ? "--eqtlutils ${params.eqtl_utils_path}" : ""
     """
     Rscript $baseDir/bin/normalisation/normaliseCountMatrix.R\
-      -c $quant_results_path/dexseq_exon_counts/merged_exon_counts.tsv\
+      -c $quant_results_path/dexseq_exon_counts/merged_exon_counts.tsv.gz\
       -s $sample_metadata\
       -p $pheno_metadata\
       -o .\
@@ -118,7 +118,7 @@ process normalise_RNAseq_tx{
     eqtl_utils_path = params.eqtl_utils_path ? "--eqtlutils ${params.eqtl_utils_path}" : ""
     """
     Rscript $baseDir/bin/normalisation/normaliseCountMatrix.R\
-      -c $quant_results_path/Salmon/merged_counts/TPM/gencode.v39.transcripts.TPM.merged.txt\
+      -c $quant_results_path/Salmon/merged_counts/TPM/gencode.v39.transcripts.TPM.merged.tsv.gz\
       -s $sample_metadata\
       -p $pheno_metadata\
       -o .\
