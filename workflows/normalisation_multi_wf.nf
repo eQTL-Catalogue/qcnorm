@@ -121,8 +121,8 @@ workflow normalise {
 
 
             add_to_qtlmap_input_tsv(output_tsv_ch
-                .join(normalise_RNAseq_ge.out.median_tpm_file).view({"joined: $it"})
-                .combine(normalise_RNAseq_leafcutter.out.qtlmap_tsv_input_ch, by: 0).view({"qtlmap_tsv_input_ch raw: $it"}).transpose().view({"transposed: $it"}), "leafcutter")
+                .join(normalise_RNAseq_ge.out.median_tpm_file)
+                .combine(normalise_RNAseq_leafcutter.out.qtlmap_tsv_input_ch, by: 0).transpose(), "leafcutter")
         }
     }
 }
