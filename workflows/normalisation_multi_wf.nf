@@ -25,7 +25,7 @@ Channel.fromPath(params.input_tsv)
     .map{row -> [ row.run_id, row.study_name, row.sample_meta_path, row.vcf_file ]}
     .set { output_tsv_ch }
 
-include { normalise_microarray; normalise_RNAseq_ge ; normalise_RNAseq_exon ; normalise_RNAseq_tx ; normalise_RNAseq_txrev } from  '../modules/normalisation_multi'
+include { normalise_microarray; normalise_RNAseq_ge ; normalise_RNAseq_exon ; normalise_RNAseq_tx ; normalise_RNAseq_txrev; normalise_RNAseq_leafcutter } from  '../modules/normalisation_multi'
 
 def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
     // item[0] : run_id
@@ -39,7 +39,7 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
         qtlgroup_quantiletpm_ch
         .collectFile(storeDir:"${params.outdir}/qtl_group_inputs") { item ->
                     [ "${item[0]}_${item[1]}_${quant_method}_tsv_inputs.txt", 
-                    "${item[1]}_${quant_method}_${item[4].baseName - item[1] - '.'}\t" + 
+                    "${item[1]}_${quant_method}_${item[4].baseName - ".tsv" - item[1] - '.'}\t" + 
                     "${params.outdir}/${item[0]}/${item[1]}/normalised/${quant_method}/qtl_group_split_norm/${item[4].fileName}\t" + 
                     "${pheno_metadata_list[quant_method]}\t" + 
                     "${item[2]}\t" + 
@@ -48,11 +48,23 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
                 }
                 .subscribe{ qtlmap_inputs_file.append(it.text) }
     }
-    else {
+    else if (quant_method=="leafcutter"){
         qtlgroup_quantiletpm_ch
         .collectFile(storeDir:"${params.outdir}/qtl_group_inputs") { item ->
                     [ "${item[0]}_${item[1]}_${quant_method}_tsv_inputs.txt", 
-                    "${item[1]}_${quant_method}_${item[5].baseName - item[1] - '.'}\t" + 
+                    "${item[1]}_${quant_method}_${item[5].baseName - ".tsv" - item[1] - '.'}\t" + 
+                    "${params.outdir}/${item[0]}/${item[1]}/normalised/${quant_method}/qtl_group_split_norm/${item[5].fileName}\t" + 
+                    "${params.outdir}/${item[0]}/${item[1]}/normalised/${quant_method}/leafcutter_metadata.txt.gz\t" + 
+                    "${item[2]}\t" + 
+                    "${item[3]}\t" + 
+                    "${params.outdir}/${item[0]}/${item[1]}/normalised/${item[4].fileName}" + '\n' ]
+                }
+                .subscribe{ qtlmap_inputs_file.append(it.text) }
+    } else {
+        qtlgroup_quantiletpm_ch
+        .collectFile(storeDir:"${params.outdir}/qtl_group_inputs") { item ->
+                    [ "${item[0]}_${item[1]}_${quant_method}_tsv_inputs.txt", 
+                    "${item[1]}_${quant_method}_${item[5].baseName - ".tsv" - item[1] - '.'}\t" + 
                     "${params.outdir}/${item[0]}/${item[1]}/normalised/${quant_method}/qtl_group_split_norm/${item[5].fileName}\t" + 
                     "${pheno_metadata_list[quant_method]}\t" + 
                     "${item[2]}\t" + 
@@ -101,6 +113,16 @@ workflow normalise {
             add_to_qtlmap_input_tsv(output_tsv_ch
                 .join(normalise_RNAseq_ge.out.median_tpm_file)
                 .combine(normalise_RNAseq_txrev.out.qtlmap_tsv_input_ch, by: 0).transpose(), "txrev")
+        }
+        if (!params.skip_leafcutter_norm) {
+            normalise_RNAseq_leafcutter(normalise_RNAseq_ge.out.inputs_with_quant_tpm_ch, 
+                                        Channel.fromPath(params.leafcutter_transcript_meta, checkIfExists: true).collect(),
+                                        Channel.fromPath(params.leafcutter_intron_annotation, checkIfExists: true).collect())
+
+
+            add_to_qtlmap_input_tsv(output_tsv_ch
+                .join(normalise_RNAseq_ge.out.median_tpm_file)
+                .combine(normalise_RNAseq_leafcutter.out.qtlmap_tsv_input_ch, by: 0).transpose(), "leafcutter")
         }
     }
 }

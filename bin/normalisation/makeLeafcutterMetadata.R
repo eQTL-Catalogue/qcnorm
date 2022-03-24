@@ -1,5 +1,6 @@
 message(" ## Loading libraries: optparse")
 suppressPackageStartupMessages(library("optparse"))
+suppressPackageStartupMessages(library("dplyr"))
 
 #Parse command-line options
 option_list <- list(
@@ -41,12 +42,29 @@ if (!is.null(eqtlutils_path)){
 }
 
 #Import data
-transcript_meta = eQTLUtils::importBiomartMetadata(transcript_meta_path)
+transcript_meta = readr::read_tsv(transcript_meta_path, col_types = "ccccccccciiciiicccccccccidccccii")
+col_df = dplyr::data_frame(column_name = c('Gene stable ID', 'Transcript stable ID', 'Chromosome/scaffold name', 'Gene start (bp)', 'Gene end (bp)', 'Strand', 'Transcript start (bp)', 'Transcript end (bp)', 'Transcription start site (TSS)', 'Transcript length (including UTRs and CDS)', 'Transcript support level (TSL)', 'APPRIS annotation', 'GENCODE basic annotation', 'Gene name', 'Transcript name', 'Transcript count', 'Transcript type', 'Gene type', 'Gene % GC content', 'Version (gene)', 'Version (transcript)'),
+                           column_id = c('gene_id', 'transcript_id', 'chromosome', 'gene_start', 'gene_end', 'strand', 'transcript_start', 'transcript_end', 'tss', 'transcript_length', 'transcript_tsl', 'transcript_appris', 'is_gencode_basic', 'gene_name', 'transcript_name', 'transcript_count', 'transcript_type', 'gene_type', 'gene_gc_content', 'gene_version', 'transcript_version'))
+transcript_meta = transcript_meta[,col_df$column_name] %>% dplyr::distinct()
+colnames(transcript_meta) = col_df$column_id
+
 leafcutter_count_matrix = utils::read.csv(count_matrix_path, sep = "", stringsAsFactors = FALSE)
 
 #Import Leafcutter count matrix
 leafcutter_meta = eQTLUtils::leafcutterAnnotateIntrons(leafcutter_count_matrix$phenotype_id, 
                                                        intron_annotation_path, transcript_meta)
+
+# Change the column order. TODO: change it in eQTLUtils (leafcutterAnnotateIntrons) in the future 
+required_gene_meta_columns = c("phenotype_id","quant_id","group_id","gene_id",
+                               "chromosome","gene_start","gene_end","strand",
+                               "gene_name","gene_type", "gene_version",
+                               "phenotype_pos", "gene_gc_content")
+
+leafcutter_meta = leafcutter_meta %>% 
+  dplyr::filter(!is.na(gene_id)) %>% 
+  dplyr::filter(!base::grepl(pattern = ";", x = gene_id, fixed = TRUE)) %>% 
+  dplyr::select(required_gene_meta_columns, dplyr::everything())
+
 #Export Leafcutter gene metadata file
 gzfile = gzfile(output_file_path, "w")
 write.table(leafcutter_meta, gzfile, sep = "\t", quote = FALSE, row.names = FALSE)

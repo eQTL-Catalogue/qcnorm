@@ -2,7 +2,7 @@
 nextflow.enable.dsl=2
 
 exp_matrix_path = params.is_microarray ? params.microarray_exp_matrix_path : 
-                    params.quant_results_path ? "${params.quant_results_path}/featureCounts/merged_gene_counts.txt" : params.ge_exp_matrix_path
+                    params.quant_results_path ? "${params.quant_results_path}/featureCounts/merged_gene_counts.tsv.gz" : params.ge_exp_matrix_path
 
 if (!params.is_microarray) {
     params.mbv_path = params.quant_results_path ? "${params.quant_results_path}/MBV" : params.mbv_files_dir 

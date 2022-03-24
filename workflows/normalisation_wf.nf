@@ -14,7 +14,7 @@ pheno_metadata_list = [
 
 exp_matrix_path = params.is_microarray ? 
                     params.microarray_exp_matrix_path : 
-                    "${params.quant_results_path}/featureCounts/merged_gene_counts.txt"
+                    "${params.quant_results_path}/featureCounts/merged_gene_counts.tsv.gz"
 
 if(!params.skip_ge_norm){
     Channel.fromPath(params.ge_exp_matrix_path ? 
@@ -24,14 +24,14 @@ if(!params.skip_ge_norm){
 }
 if(!params.skip_exon_norm && !params.is_microarray){
     Channel.fromPath(params.exon_exp_matrix_path ? 
-            params.exon_exp_matrix_path : "${params.quant_results_path}/dexseq_exon_counts/merged_exon_counts.tsv", 
+            params.exon_exp_matrix_path : "${params.quant_results_path}/dexseq_exon_counts/merged_exon_counts.tsv.gz", 
             checkIfExists: true)
         .set { exon_count_matrix_ch }
 }
 if(!params.skip_tx_norm && !params.is_microarray){
     Channel.fromPath(params.tx_usage_matrix_path ? 
             params.tx_usage_matrix_path : 
-            "${params.quant_results_path}/Salmon/merged_counts/TPM/gencode.v30.transcripts.TPM.merged.txt", 
+            "${params.quant_results_path}/Salmon/merged_counts/TPM/gencode.v39.transcripts.TPM.merged.tsv.gz", 
             checkIfExists: true)
         .set { tx_usage_matrix_ch }
 }
