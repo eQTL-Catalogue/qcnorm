@@ -73,11 +73,23 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
                 }
                 .subscribe{ qtlmap_inputs_file.append(it.text) }
     }
-    else {
+    else if (quant_method=="leafcutter"){
         qtlgroup_quantiletpm_ch
         .collectFile(storeDir:"${params.outdir}/${params.study_name}/qtl_group_inputs") { item ->
                     [ "${params.study_name}_${quant_method}_tsv_inputs.txt", 
-                    "${params.study_name}_${quant_method}_${item[0].baseName - params.study_name - '.'}\t" + 
+                    "${params.study_name}_${quant_method}_${item[0].baseName - ".tsv" - params.study_name - '.'}\t" + 
+                    "${params.publishDir}/${quant_method}/qtl_group_split_norm/${item[0].fileName}\t" + 
+                    "${params.publishDir}/${quant_method}/leafcutter_metadata.txt.gz\t" + 
+                    "${params.sample_meta_path}\t" + 
+                    "${params.vcf_file}\t" + 
+                    "${params.publishDir}/${item[1].fileName}" + '\n' ]
+                }
+                .subscribe{ qtlmap_inputs_file.append(it.text) }
+    } else {
+        qtlgroup_quantiletpm_ch
+        .collectFile(storeDir:"${params.outdir}/${params.study_name}/qtl_group_inputs") { item ->
+                    [ "${params.study_name}_${quant_method}_tsv_inputs.txt", 
+                    "${params.study_name}_${quant_method}_${item[0].baseName - ".tsv" - params.study_name - '.'}\t" + 
                     "${params.publishDir}/${quant_method}/qtl_group_split_norm/${item[0].fileName}\t" + 
                     "${pheno_metadata_list[quant_method]}\t" + 
                     "${params.sample_meta_path}\t" + 
