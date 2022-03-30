@@ -75,6 +75,21 @@ message("Number of samples in study after quality control: ", sample_metadata[sa
 ```{r create_and_filter_SE, echo=FALSE, include=FALSE}
 se <- eQTLUtils::filterSummarizedExperiment(se, filter_rna_qc = TRUE, filter_genotype_qc = TRUE)
 study_name <- sample_metadata$study[1]
+
+mbvImportData <- function(mbv_dir, suffix = ".mbv_output.txt"){
+  #List all files
+  mbv_files = list.files(mbv_dir, full.names = T)
+  mbv_files = mbv_files[grep(suffix, mbv_files)]
+
+  #Make sample names
+  sample_names = stringr::str_replace_all(basename(mbv_files), suffix, "")
+  sample_list = setNames(mbv_files, sample_names)
+
+  #Import mbv files
+  mbv_results = purrr::map(sample_list, ~readr::read_delim(., delim = " ", col_types = "ciiiiiiiddi"))
+
+  return(mbv_results)
+}
 ```
 ### PCA of gene expression data
 
@@ -235,7 +250,7 @@ if (use_plotly) {
 `r if(mbv_files_dir!=""){"Uses [QTLtools mbv](https://doi.org/10.1093/bioinformatics/btx074) (Match BAM to VCF) tool to check concordance between genotype data and genetic variants detected from the RNA-seq data. "}`
 
 ```{r mbv, echo=FALSE, eval=mbv_files_dir!=""}
-mbv_results = eQTLUtils::mbvImportData(mbv_dir = mbv_files_dir, suffix = ".mbv_output.txt")
+mbv_results = mbvImportData(mbv_dir = mbv_files_dir, suffix = ".mbv_output.txt")
 best_matches = purrr::map_df(mbv_results, eQTLUtils::mbvFindBestMatch, .id = "sample_id") %>% dplyr::arrange(distance)
 mbv_meta = SummarizedExperiment::colData(se) %>% as.data.frame() %>% dplyr::as_tibble() %>% dplyr::select(sample_id, genotype_id)
 best_matches <- dplyr::left_join(mbv_meta, best_matches, by = "sample_id")
