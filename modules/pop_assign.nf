@@ -78,8 +78,6 @@ process getSNPsFromRef{
 
 // convert vcf file to plink binary file (.bed)
 process sampleVCftoBED{
-    publishDir "${params.outdir}/${params.study_name}/pop_assign", mode: 'copy'
-    
     input:
     path 'sample.vcf.gz'
 
