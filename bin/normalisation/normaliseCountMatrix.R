@@ -139,6 +139,9 @@ if (!dir.exists(paste0(output_dir, "/qtl_group_split_norm"))){
 if (!dir.exists(paste0(output_dir, "/norm_not_filtered"))){
   dir.create(paste0(output_dir, "/norm_not_filtered"), recursive = TRUE)
 }
+if (!dir.exists(paste0(output_dir, "/qtl_group_split_norm_anonym"))){
+  dir.create(paste0(output_dir, "/qtl_group_split_norm_anonym"), recursive = TRUE)
+}
 
 split_and_filter_by_qtlgroup <- function(norm_count_df, 
                                          sample_metadata_df, 
@@ -183,6 +186,8 @@ split_and_filter_by_qtlgroup <- function(norm_count_df,
   
   message("TPM filtered and splitted by qtl_group TSVs exported into: ", file.path(out_dir, "qtl_group_split_norm", paste0(study_name, ".", qtl_group_selected ,".tsv.gz")))
   message("______________________________________________________")
+  
+  return(counts_for_selected_qtl_group)
 }
 
 # Get unique qtl_group values
@@ -224,7 +229,7 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     quantile_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.95)
     merged_95quantile_tpm_df <- merged_95quantile_tpm_df %>% base::rbind(quantile_tpm_df)
     
-    split_and_filter_by_qtlgroup(norm_count_df = cqn_int_assay_fc_formatted, 
+    normalised_gene_counts_qtl_group <- split_and_filter_by_qtlgroup(norm_count_df = cqn_int_assay_fc_formatted, 
                                  sample_metadata = SummarizedExperiment::colData(cqn_int_norm), 
                                  phenotype_metadata = phenotype_meta, 
                                  qtl_group_selected = qtl_group_in_se,
@@ -232,6 +237,21 @@ for (qtl_group_in_se in qtl_groups_in_se) {
                                  out_dir = output_dir, 
                                  quantile_tpms = quantile_tpm_df, 
                                  tpm_thres = tpm_threshold)
+    
+    orig_sample_names = colnames(normalised_gene_counts_qtl_group)
+    colnames(normalised_gene_counts_qtl_group) <- c("phenotype_id", paste0(study_name, "_", seq(from = 1, to = ncol(normalised_gene_counts_qtl_group)-1)))
+    anonym_sample_names_df = data.frame(sample_id = orig_sample_names[-1], pseudo_id = colnames(normalised_gene_counts_qtl_group)[-1])
+    
+    gzfile = gzfile(file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, ".", qtl_group_in_se, "_anonym.tsv.gz")), "w")
+    write.table(x = normalised_gene_counts_qtl_group, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    close(gzfile)
+    
+    sample_metadata_anonym_path = file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, "_anonym.tsv"))
+    sample_metadata_anonym <- anonym_sample_names_df %>% 
+      dplyr::left_join(sample_metadata, by = "sample_id") %>% 
+      dplyr::select(pseudo_id, sex, cell_type, condition, qtl_group, timepoint, read_length, stranded, paired, protocol, rna_qc_passed, genotype_qc_passed, study)
+    write.table(x = sample_metadata_anonym, file = sample_metadata_anonym_path, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    
   } else if (quant_method=="exon_counts") {
     cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "exon_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")

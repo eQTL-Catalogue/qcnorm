@@ -49,6 +49,7 @@ process normalise_RNAseq_ge{
     path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
     path "*_median_tpm.tsv.gz", emit: median_tpm_file
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    path "qtl_group_split_norm_anonym/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
