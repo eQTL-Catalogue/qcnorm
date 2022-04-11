@@ -89,6 +89,16 @@ dummy <- assertthat::assert_that(!is.null(phenotype_meta_path) && file.exists(ph
 # Read the inputs
 message("## Reading sample metadata ##")
 sample_metadata <- utils::read.csv(sample_meta_path, sep = '\t', stringsAsFactors = FALSE)
+assertthat::has_name(sample_metadata, "sample_id")
+assertthat::has_name(sample_metadata, "genotype_id")
+
+# Check if all genotype_ids start with a letter and not a number or special character
+assertthat::assert_that(all(stringr::str_detect(sample_metadata$genotype_id, "^[:alpha:]")), 
+                        msg = "All genotype_id values should start with a letter!")
+
+# Check if all sample_ids start with a letter and not a number or special character
+assertthat::assert_that(all(stringr::str_detect(sample_metadata$sample_id, "^[:alpha:]")), 
+                        msg = "All sample_id values should start with a letter!")
 
 if (is.null(study_name)) { 
   assertthat::has_name(sample_metadata, "study" )
