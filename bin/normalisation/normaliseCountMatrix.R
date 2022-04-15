@@ -93,11 +93,11 @@ assertthat::has_name(sample_metadata, "sample_id")
 assertthat::has_name(sample_metadata, "genotype_id")
 
 # Check if all genotype_ids start with a letter and not a number or special character
-assertthat::assert_that(all(stringr::str_detect(sample_metadata$genotype_id, "^[:alpha:]")), 
+assertthat::assert_that(all(stringr::str_detect(sample_metadata$genotype_id, "^[:alpha:]"), na.rm = TRUE),
                         msg = "All genotype_id values should start with a letter!")
 
 # Check if all sample_ids start with a letter and not a number or special character
-assertthat::assert_that(all(stringr::str_detect(sample_metadata$sample_id, "^[:alpha:]")), 
+assertthat::assert_that(all(stringr::str_detect(sample_metadata$sample_id, "^[:alpha:]"), na.rm = TRUE),
                         msg = "All sample_id values should start with a letter!")
 
 if (is.null(study_name)) { 
