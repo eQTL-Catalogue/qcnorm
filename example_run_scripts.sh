@@ -82,3 +82,17 @@ nextflow run main.nf -profile tartu_hpc -resume\
    --is_microarray\
    --norm_keep_XY\
    --outdir eQTL_Catalogue_r5_ma
+
+# Runs normalisation of only RNAseq with a specific count matrix, instead of quant_results_path
+# vcf_file is optional (can be skipped, but then qtlmap_inputs table will put "false" for vcf)
+nextflow run main.nf -profile tartu_hpc -resume \
+  -entry norm_only \
+  --study_name GEUVADIS_GBR20 \
+  --vcf_file /gpfs/space/projects/eQTLCatalogue/test_data/GEUVADIS_GBR_cohort/vcf/GEUVADIS_GBR20.vcf.gz \
+  --ge_exp_matrix_path /gpfs/space/home/kerimov/GitHub/rnaseq/results/test_GEUVADIS_20samples_changed/featureCounts/merged_gene_counts.tsv.gz \
+  --sample_meta_path /gpfs/space/projects/eQTLCatalogue/SampleArcheology_V6.0/studies/cleaned/GEUVADIS_test_20samples.tsv \
+  --skip_exon_norm \
+  --skip_tx_norm \
+  --skip_txrev_norm \
+  --skip_leafcutter_norm \
+  --outdir results/GEUVADIS_GBR20_exp_matrix_norm_only
