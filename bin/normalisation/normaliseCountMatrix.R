@@ -92,6 +92,20 @@ message("## Reading sample metadata ##")
 sample_metadata <- utils::read.csv(sample_meta_path, sep = '\t', stringsAsFactors = FALSE)
 assertthat::has_name(sample_metadata, "sample_id")
 assertthat::has_name(sample_metadata, "genotype_id")
+assertthat::has_name(sample_metadata, "qtl_group")
+assertthat::has_name(sample_metadata, "rna_qc_passed")
+assertthat::has_name(sample_metadata, "genotype_qc_passed")
+assertthat::has_name(sample_metadata, "study")
+
+#Required columns for anonymous metadata
+assertthat::has_name(sample_metadata, "sex")
+assertthat::has_name(sample_metadata, "cell_type")
+assertthat::has_name(sample_metadata, "condition")
+assertthat::has_name(sample_metadata, "timepoint")
+assertthat::has_name(sample_metadata, "read_length")
+assertthat::has_name(sample_metadata, "stranded")
+assertthat::has_name(sample_metadata, "paired")
+assertthat::has_name(sample_metadata, "protocol")
 
 # Check if all genotype_ids start with a letter and not a number or special character
 assertthat::assert_that(all(stringr::str_detect(sample_metadata$genotype_id, "^[:alpha:]"), na.rm = TRUE),
