@@ -41,14 +41,15 @@ suppressPackageStartupMessages(library("data.table"))
 if (FALSE) {
   opt = list()
   opt$n = "GTEx"
-  opt$c="TPM/"
-  opt$s="GTEx.tsv"
-  opt$p="txrevise_Ensembl_96_phenotype_metadata.tsv.gz"
-  opt$q="txrevise"
+  opt$c="testdata/merged_gene_counts.tsv.gz"
+  opt$s="testdata/PISA_metadata.tsv"
+  opt$p="testdata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz"
+  opt$q="gene_counts"
   opt$o="."
-  opt$t="GTEx_95quantile_tpm.tsv.gz"
-  opt$keep_XY=TRUE
+  opt$t=NULL
+  opt$keep_XY=TRUEz
   opt$filter_qc=TRUE
+  opt$eqtlutils = "../eQTLUtils/"
 }
 
 count_matrix_path = opt$c
