@@ -12,19 +12,6 @@ pheno_metadata_list = [
     "microarray": params.array_pheno_meta_path
 ]
 
-//run_id	study_name	quant_results_path	sample_meta_path	vcf_file
-Channel.fromPath(params.input_tsv)
-    .ifEmpty { error "Cannot find input_tsv file in: ${params.input_tsv}" }
-    .splitCsv(header: true, sep: '\t', strip: true)
-    .map{row -> [ row.run_id, row.study_name, file(row.quant_results_path), file(row.sample_meta_path) ]}
-    .set { study_file_ge_ch }
-
-Channel.fromPath(params.input_tsv)
-    .ifEmpty { error "Cannot find input_tsv file in: ${params.input_tsv}" }
-    .splitCsv(header: true, sep: '\t', strip: true)
-    .map{row -> [ row.run_id, row.study_name, row.sample_meta_path, row.vcf_file ]}
-    .set { output_tsv_ch }
-
 include { normalise_microarray; normalise_RNAseq_ge ; normalise_RNAseq_exon ; normalise_RNAseq_tx ; normalise_RNAseq_txrev; normalise_RNAseq_leafcutter } from  '../modules/normalisation_multi'
 
 def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
@@ -80,6 +67,19 @@ workflow {
 }
 
 workflow normalise {
+        //run_id	study_name	quant_results_path	sample_meta_path	vcf_file
+    Channel.fromPath(params.input_tsv)
+        .ifEmpty { error "Cannot find input_tsv file in: ${params.input_tsv}" }
+        .splitCsv(header: true, sep: '\t', strip: true)
+        .map{row -> [ row.run_id, row.study_name, file(row.quant_results_path), file(row.sample_meta_path) ]}
+        .set { study_file_ge_ch }
+
+    Channel.fromPath(params.input_tsv)
+        .ifEmpty { error "Cannot find input_tsv file in: ${params.input_tsv}" }
+        .splitCsv(header: true, sep: '\t', strip: true)
+        .map{row -> [ row.run_id, row.study_name, row.sample_meta_path, row.vcf_file ]}
+        .set { output_tsv_ch }
+        
     if (params.is_microarray){
         normalise_microarray(study_file_ge_ch, Channel.fromPath(params.array_pheno_meta_path, checkIfExists: true).collect())
 

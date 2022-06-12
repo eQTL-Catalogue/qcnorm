@@ -50,6 +50,7 @@ process normalise_RNAseq_ge{
     path "*_median_tpm.tsv.gz", emit: median_tpm_file
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
     path "qtl_group_split_norm_anonym/*"
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -83,6 +84,7 @@ process normalise_RNAseq_exon{
     output:
     path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -117,6 +119,7 @@ process normalise_RNAseq_tx{
     output:
     path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -151,6 +154,7 @@ process normalise_RNAseq_txrev{
     output:
     path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -188,6 +192,7 @@ process normalise_RNAseq_leafcutter{
     path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
     path "leafcutter_metadata.txt.gz"
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""

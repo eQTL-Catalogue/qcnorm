@@ -41,12 +41,12 @@ suppressPackageStartupMessages(library("data.table"))
 if (FALSE) {
   opt = list()
   opt$n = "GTEx"
-  opt$c="TPM/"
-  opt$s="GTEx.tsv"
-  opt$p="txrevise_Ensembl_96_phenotype_metadata.tsv.gz"
-  opt$q="txrevise"
+  opt$c="/Users/kerimov/Work/temp_files/leafcutter_norm_temp/leafcutter_perind_numers.counts.formatted.gz"
+  opt$s="/Users/kerimov/Work/temp_files/leafcutter_norm_temp/GTEx.tsv"
+  opt$p="/Users/kerimov/Work/temp_files/leafcutter_norm_temp/leafcutter_metadata.txt.gz"
+  opt$q="leafcutter"
   opt$o="."
-  opt$t="GTEx_95quantile_tpm.tsv.gz"
+  opt$t="/Users/kerimov/Work/temp_files/leafcutter_norm_temp/GTEx_95quantile_tpm.tsv.gz"
   opt$keep_XY=TRUE
   opt$filter_qc=TRUE
 }
@@ -92,13 +92,13 @@ sample_metadata <- utils::read.csv(sample_meta_path, sep = '\t', stringsAsFactor
 assertthat::has_name(sample_metadata, "sample_id")
 assertthat::has_name(sample_metadata, "genotype_id")
 
-# Check if all genotype_ids start with a letter and not a number or special character
-assertthat::assert_that(all(stringr::str_detect(sample_metadata$genotype_id, "^[:alpha:]"), na.rm = TRUE),
-                        msg = "All genotype_id values should start with a letter!")
+# # Check if all genotype_ids start with a letter and not a number or special character
+# assertthat::assert_that(all(stringr::str_detect(sample_metadata$genotype_id, "^[:alpha:]"), na.rm = TRUE),
+#                         msg = "All genotype_id values should start with a letter!")
 
-# Check if all sample_ids start with a letter and not a number or special character
-assertthat::assert_that(all(stringr::str_detect(sample_metadata$sample_id, "^[:alpha:]"), na.rm = TRUE),
-                        msg = "All sample_id values should start with a letter!")
+# # Check if all sample_ids start with a letter and not a number or special character
+# assertthat::assert_that(all(stringr::str_detect(sample_metadata$sample_id, "^[:alpha:]"), na.rm = TRUE),
+#                         msg = "All sample_id values should start with a letter!")
 
 if (is.null(study_name)) { 
   assertthat::has_name(sample_metadata, "study" )
@@ -129,7 +129,22 @@ dim(se)
 
 if (filter_qc){
   message("## Filter SummarizedExperiment by removing samples that fail QC ##")
-  se <- eQTLUtils::filterSummarizedExperiment(se, filter_rna_qc = TRUE, filter_genotype_qc = TRUE)
+  
+  #Specify valid chromsomes and valid gene types
+  valid_gene_types = c("lincRNA","protein_coding","IG_C_gene","IG_D_gene","IG_J_gene",
+                       "IG_V_gene", "TR_C_gene","TR_D_gene","TR_J_gene", "TR_V_gene",
+                       "3prime_overlapping_ncrna","known_ncrna", "processed_transcript",
+                       "antisense","sense_intronic","sense_overlapping", "leafcutter")
+  valid_chromosomes = c("1","10","11","12","13","14","15","16","17","18","19",
+                        "2","20","21","22","3","4","5","6","7","8","9")
+  if(keep_XY){
+    valid_chromosomes = c(valid_chromosomes, c("X","Y"))
+  }
+  
+  se <- eQTLUtils::filterSummarizedExperiment(se, filter_rna_qc = TRUE, 
+                                              filter_genotype_qc = TRUE,
+                                              valid_gene_types = valid_gene_types,
+                                              valid_chromosomes = valid_chromosomes)
   dim(se)
 }
 
@@ -142,6 +157,10 @@ if (!dir.exists(paste0(output_dir, "/norm_not_filtered"))){
 if (!dir.exists(paste0(output_dir, "/qtl_group_split_norm_anonym"))){
   dir.create(paste0(output_dir, "/qtl_group_split_norm_anonym"), recursive = TRUE)
 }
+if (!dir.exists(paste0(output_dir, "/per_million_normalised"))){
+  dir.create(paste0(output_dir, "/per_million_normalised"), recursive = TRUE)
+}
+
 
 split_and_filter_by_qtlgroup <- function(norm_count_df, 
                                          sample_metadata_df, 
@@ -190,6 +209,37 @@ split_and_filter_by_qtlgroup <- function(norm_count_df,
   return(counts_for_selected_qtl_group)
 }
 
+
+write_df_to_tsv_gz <- function(df, file_dir) {
+  gzfile = gzfile(file_dir, "w")
+  write.table(x = df, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+  close(gzfile)
+}
+
+write_se_as_tsv_gz <- function(se, assay_name, file_dir) {
+  assay_df <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(se)[[assay_name]]), assays(se)[[assay_name]])
+  
+  write_df_to_tsv_gz(df = assay_df, file_dir = file_dir)
+}
+
+get_scaling_factors <- function(se, assay_name = "counts"){
+  #Extract fields
+  row_data = SummarizedExperiment::rowData(se)
+  col_data = SummarizedExperiment::colData(se)
+  assays = SummarizedExperiment::assays(se)
+  
+  #Ensure that required columns are present
+  assertthat::assert_that(assertthat::has_name(row_data, "phenotype_length"))
+  
+  #Perform tpm-normalisation
+  count_matrix = assays[[assay_name]]
+  lengths = row_data$phenotype_length
+  scaling_factor = colSums(t(t(count_matrix)/lengths))/1e6
+  
+  df_return = data_frame(sample_id = rownames(col_data), scaling_factors = scaling_factor)
+  return(df_return)
+}
+
 # Get unique qtl_group values
 qtl_groups_in_se <- se$qtl_group %>% base::unique()
 
@@ -210,14 +260,28 @@ for (qtl_group_in_se in qtl_groups_in_se) {
   
   message("## Starting normalisation process... ##")
   if (quant_method=="gene_counts") {
+    # get scaling factos
+    scaling_factors_df = get_scaling_factors(se = se_qtl_group, assay_name = "counts")
+    write_df_to_tsv_gz(df = scaling_factors_df, 
+                       file_dir = file.path(output_dir, "per_million_normalised", paste0(study_name, ".", qtl_group_in_se, ".scaling_factors.tsv.gz")))
+    
+    # Write TPM normalised matrix for boxplots
+    se_qtl_group_tpm = eQTLUtils::normaliseSE_tpm(se_qtl_group, assay_name = "counts")
+    write_se_as_tsv_gz(se = se_qtl_group_tpm,
+                       assay_name = "tpms",
+                       file_dir = file.path(output_dir, "per_million_normalised", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_TPM_norm.tsv.gz")))
+    
     cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "gene_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")
     
+    write_se_as_tsv_gz(se = cqn_int_norm, assay_name = "qnorm", 
+                       file_dir = file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_cqn_int_norm.tsv.gz")))
+    
     cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
     
-    gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_cqn_int_norm.tsv.gz")), "w")
-    write.table(x = cqn_int_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    close(gzfile)
+    # gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_cqn_int_norm.tsv.gz")), "w")
+    # write.table(x = cqn_int_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    # close(gzfile)
     
     message("## Normalised gene count matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_cqn_int_norm.tsv.gz")))
     
@@ -242,9 +306,12 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     colnames(normalised_gene_counts_qtl_group) <- c("phenotype_id", paste0(study_name, "_", seq(from = 1, to = ncol(normalised_gene_counts_qtl_group)-1)))
     anonym_sample_names_df = data.frame(sample_id = orig_sample_names[-1], pseudo_id = colnames(normalised_gene_counts_qtl_group)[-1])
     
-    gzfile = gzfile(file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, ".", qtl_group_in_se, "_anonym.tsv.gz")), "w")
-    write.table(x = normalised_gene_counts_qtl_group, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    close(gzfile)
+    
+    write_df_to_tsv_gz(df = normalised_gene_counts_qtl_group, 
+                       file_dir = file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, ".", qtl_group_in_se, "_anonym.tsv.gz")))
+    # gzfile = gzfile(file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, ".", qtl_group_in_se, "_anonym.tsv.gz")), "w")
+    # write.table(x = normalised_gene_counts_qtl_group, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    # close(gzfile)
     
     sample_metadata_anonym_path = file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, "_anonym.tsv"))
     sample_metadata_anonym <- anonym_sample_names_df %>% 
@@ -253,13 +320,21 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     write.table(x = sample_metadata_anonym, file = sample_metadata_anonym_path, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
     
   } else if (quant_method=="exon_counts") {
+    # Write TPM normalised matrix for boxplots
+    se_qtl_group_tpm = eQTLUtils::normaliseSE_tpm(se_qtl_group, assay_name = "counts")
+    write_se_as_tsv_gz(se = se_qtl_group_tpm,
+                       assay_name = "tpms",
+                       file_dir = file.path(output_dir, "per_million_normalised", paste0(study_name, ".", qtl_group_in_se, ".exon_counts_TPM_norm.tsv.gz")))
+    
     cqn_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "exon_counts", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     cqn_int_norm <- eQTLUtils::normaliseSE_quantile(cqn_norm, assay_name = "cqn")
     cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
     
-    gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv.gz")), "w")
-    write.table(x = cqn_int_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    close(gzfile)
+    write_df_to_tsv_gz(df = cqn_int_assay_fc_formatted, 
+                       file_dir = file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv.gz")))
+    # gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv.gz")), "w")
+    # write.table(x = cqn_int_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    # close(gzfile)
 
     message("## Normalised exon count matrix exported into: ", output_dir, "/norm_not_filtered/", study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv.gz")
     
@@ -272,12 +347,20 @@ for (qtl_group_in_se in qtl_groups_in_se) {
                                  quantile_tpms = quantile_tpm_df, 
                                  tpm_thres = tpm_threshold)
   } else if (quant_method %in% c("transcript_usage", "txrevise")) {
+    # Write TPM normalised matrix for boxplots
+    write_se_as_tsv_gz(se = se_qtl_group,
+                       assay_name = "tpms",
+                       file_dir = file.path(output_dir, "per_million_normalised", paste0(study_name, ".", qtl_group_in_se, ".", quant_method, "_TPM_norm.tsv.gz")))
+    
     q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "txrevise", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
     
-    gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")), "w")
-    write.table(x = qnorm_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    close(gzfile)
+    
+    write_df_to_tsv_gz(df = qnorm_assay_fc_formatted, 
+                       file_dir = file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")))
+    # gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")), "w")
+    # write.table(x = qnorm_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    # close(gzfile)
 
     message("## Normalised transcript usage matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")))
     
@@ -290,12 +373,20 @@ for (qtl_group_in_se in qtl_groups_in_se) {
                                  quantile_tpms = quantile_tpm_df, 
                                  tpm_thres = tpm_threshold)
   } else if (quant_method == "leafcutter") {
+    array_counts = assay(se_qtl_group)
+    array_counts_norm = array_counts/(colSums(array_counts) / 1e6)
+    array_counts_norm <- SummarizedExperiment::cbind(phenotype_id = rownames(array_counts_norm), array_counts_norm)
+    write_df_to_tsv_gz(df = array_counts_norm, 
+                       file_dir = file.path(output_dir, "per_million_normalised", paste0(study_name, ".", qtl_group_in_se, ".", quant_method, "_TPM_norm.tsv.gz")))
+    
     q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "leafcutter", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
     
-    gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")), "w")
-    write.table(x = qnorm_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    close(gzfile)
+    write_se_as_tsv_gz(se = q_norm, assay_name = "qnorm", 
+                       file_dir = file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")))
+    # gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")), "w")
+    # write.table(x = qnorm_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    # close(gzfile)
     
     message("## Normalised transcript usage matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")))
     

@@ -16,46 +16,6 @@ exp_matrix_path = params.is_microarray ?
                     params.microarray_exp_matrix_path : 
                     "${params.quant_results_path}/featureCounts/merged_gene_counts.tsv.gz"
 
-if(!params.skip_ge_norm){
-    Channel.fromPath(params.ge_exp_matrix_path ? 
-            params.ge_exp_matrix_path : exp_matrix_path, 
-            checkIfExists: true)
-        .set { ge_count_matrix_ch }
-}
-if(!params.skip_exon_norm && !params.is_microarray){
-    Channel.fromPath(params.exon_exp_matrix_path ? 
-            params.exon_exp_matrix_path : "${params.quant_results_path}/dexseq_exon_counts/merged_exon_counts.tsv.gz", 
-            checkIfExists: true)
-        .set { exon_count_matrix_ch }
-}
-if(!params.skip_tx_norm && !params.is_microarray){
-    Channel.fromPath(params.tx_usage_matrix_path ? 
-            params.tx_usage_matrix_path : 
-            "${params.quant_results_path}/Salmon/merged_counts/TPM/gencode.v39.transcripts.TPM.merged.tsv.gz", 
-            checkIfExists: true)
-        .set { tx_usage_matrix_ch }
-}
-if(!params.skip_txrev_norm && !params.is_microarray){
-    Channel.fromPath(params.txrev_usage_matrix_path ? 
-            params.txrev_usage_matrix_path : 
-            "${params.quant_results_path}/Salmon/merged_counts/TPM/", 
-            checkIfExists: true, type: 'dir')
-        .set { txrev_usage_matrix_ch }
-}
-if(!params.skip_leafcutter_norm && !params.is_microarray){
-    Channel.fromPath(params.leafcutter_usage_matrix_path ? 
-            params.leafcutter_usage_matrix_path : 
-            "${params.quant_results_path}/leafcutter/leafcutter_perind_numers.counts.formatted.gz", 
-            checkIfExists: true)
-        .set { leafcutter_matrix_ch }
-}
-
-Channel
-    .fromPath(params.sample_meta_path, checkIfExists: true)
-    .set { sample_metadata_ch }
-
-
-
 include { normalise_microarray ; normalise_RNAseq_ge ; normalise_RNAseq_exon ; normalise_RNAseq_tx ; normalise_RNAseq_txrev ; normalise_RNAseq_leafcutter} from  '../modules/normalisation'
 
 
@@ -105,6 +65,43 @@ workflow {
 }
 
 workflow normalise {
+    if(!params.skip_ge_norm){
+        Channel.fromPath(params.ge_exp_matrix_path ? 
+                params.ge_exp_matrix_path : exp_matrix_path, 
+                checkIfExists: true)
+            .set { ge_count_matrix_ch }
+    }
+    if(!params.skip_exon_norm && !params.is_microarray){
+        Channel.fromPath(params.exon_exp_matrix_path ? 
+                params.exon_exp_matrix_path : "${params.quant_results_path}/dexseq_exon_counts/merged_exon_counts.tsv.gz", 
+                checkIfExists: true)
+            .set { exon_count_matrix_ch }
+    }
+    if(!params.skip_tx_norm && !params.is_microarray){
+        Channel.fromPath(params.tx_usage_matrix_path ? 
+                params.tx_usage_matrix_path : 
+                "${params.quant_results_path}/Salmon/merged_counts/TPM/gencode.v39.transcripts.TPM.merged.tsv.gz", 
+                checkIfExists: true)
+            .set { tx_usage_matrix_ch }
+    }
+    if(!params.skip_txrev_norm && !params.is_microarray){
+        Channel.fromPath(params.txrev_usage_matrix_path ? 
+                params.txrev_usage_matrix_path : 
+                "${params.quant_results_path}/Salmon/merged_counts/TPM/", 
+                checkIfExists: true, type: 'dir')
+            .set { txrev_usage_matrix_ch }
+    }
+    if(!params.skip_leafcutter_norm && !params.is_microarray){
+        Channel.fromPath(params.leafcutter_usage_matrix_path ? 
+                params.leafcutter_usage_matrix_path : 
+                "${params.quant_results_path}/leafcutter/leafcutter_perind_numers.counts.formatted.gz", 
+                checkIfExists: true)
+            .set { leafcutter_matrix_ch }
+    }
+
+    Channel.fromPath(params.sample_meta_path, checkIfExists: true)
+        .set { sample_metadata_ch }
+
     if (params.is_microarray){
         normalise_microarray(
             ge_count_matrix_ch, 

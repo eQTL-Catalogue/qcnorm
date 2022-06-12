@@ -4,6 +4,7 @@ nextflow.enable.dsl=2
 include {pop_assign} from './workflows/pop_assign_wf' params(params)
 include {quality_control} from './workflows/quality_control_wf' params(params)
 include {normalise} from './workflows/normalisation_wf' params(params)
+include {normalise as normalise_multi} from './workflows/normalisation_multi_wf' params(params)
 
 workflow pop_assign_only {
     
@@ -37,9 +38,7 @@ workflow qc_and_norm {
 }
 
 workflow norm_only_with_tsv {
-    include {normalise} from './workflows/normalisation_multi_wf' params(params)
-
-    normalise()
+    normalise_multi()
 }
 
 workflow {
