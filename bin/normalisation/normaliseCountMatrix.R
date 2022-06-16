@@ -234,7 +234,7 @@ get_scaling_factors <- function(se, assay_name = "counts"){
   #Perform tpm-normalisation
   count_matrix = assays[[assay_name]]
   lengths = row_data$phenotype_length
-  scaling_factor = colSums(t(t(count_matrix)/lengths))/1e6
+  scaling_factor = colSums(count_matrix)/1e6
   
   df_return = data_frame(sample_id = rownames(col_data), scaling_factors = scaling_factor)
   return(df_return)
@@ -377,7 +377,7 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     array_counts_norm = array_counts/(colSums(array_counts) / 1e6)
     array_counts_norm <- SummarizedExperiment::cbind(phenotype_id = rownames(array_counts_norm), array_counts_norm)
     write_df_to_tsv_gz(df = array_counts_norm, 
-                       file_dir = file.path(output_dir, "per_million_normalised", paste0(study_name, ".", qtl_group_in_se, ".", quant_method, "_TPM_norm.tsv.gz")))
+                       file_dir = file.path(output_dir, "per_million_normalised", paste0(study_name, ".", qtl_group_in_se, ".", quant_method, "_CPM_norm.tsv.gz")))
     
     q_norm <- eQTLUtils::qtltoolsPrepareSE(se_qtl_group, "leafcutter", filter_genotype_qc = FALSE, filter_rna_qc = FALSE, keep_XY)
     qnorm_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(q_norm)[["qnorm"]]), assays(q_norm)[["qnorm"]])
