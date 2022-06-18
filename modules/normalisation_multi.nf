@@ -36,6 +36,7 @@ process normalise_RNAseq_ge{
     publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "qtl_group_split_norm/*"
     publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "qtl_group_split_norm_anonym/*"
     publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "per_million_normalised/*"
+    publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "qtl_group_median_tpms/*"
     publishDir "${params.outdir}/$run_id/$study_name/normalised/", mode: 'copy', pattern: "*_tpm.tsv.gz"
 
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
@@ -52,6 +53,7 @@ process normalise_RNAseq_ge{
     tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file("*_95quantile_tpm.tsv.gz"), emit: inputs_with_quant_tpm_ch
     path "qtl_group_split_norm_anonym/*"
     path "per_million_normalised/*"
+    path "qtl_group_median_tpms/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""

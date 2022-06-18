@@ -44,7 +44,7 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
                     "${params.outdir}/${item[0]}/${item[1]}/normalised/${quant_method}/leafcutter_metadata.txt.gz\t" + 
                     "${item[2]}\t" + 
                     "${item[3]}\t" + 
-                    "${params.outdir}/${item[0]}/${item[1]}/normalised/${item[4].fileName}" + '\n' ]
+                    "${params.outdir}/${item[0]}/${item[1]}/normalised/ge/qtl_group_median_tpms/${item[1]}_ge_${item[5].baseName - ".tsv" - item[1] - '.'}_median_tpm.tsv.gz" + '\n' ]
                 }
                 .subscribe{ qtlmap_inputs_file.append(it.text) }
     } else {
@@ -56,7 +56,7 @@ def add_to_qtlmap_input_tsv(qtlgroup_quantiletpm_ch, quant_method){
                     "${pheno_metadata_list[quant_method]}\t" + 
                     "${item[2]}\t" + 
                     "${item[3]}\t" + 
-                    "${params.outdir}/${item[0]}/${item[1]}/normalised/${item[4].fileName}" + '\n' ]
+                    "${params.outdir}/${item[0]}/${item[1]}/normalised/ge/qtl_group_median_tpms/${item[1]}_ge_${item[5].baseName - ".tsv" - item[1] - '.'}_median_tpm.tsv.gz"+ '\n' ]
                 }
                 .subscribe{ qtlmap_inputs_file.append(it.text) }
     }

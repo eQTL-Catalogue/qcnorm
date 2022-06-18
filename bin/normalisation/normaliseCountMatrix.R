@@ -160,6 +160,9 @@ if (!dir.exists(paste0(output_dir, "/qtl_group_split_norm_anonym"))){
 if (!dir.exists(paste0(output_dir, "/per_million_normalised"))){
   dir.create(paste0(output_dir, "/per_million_normalised"), recursive = TRUE)
 }
+if (!dir.exists(paste0(output_dir, "/qtl_group_median_tpms"))){
+  dir.create(paste0(output_dir, "/qtl_group_median_tpms"), recursive = TRUE)
+}
 
 
 split_and_filter_by_qtlgroup <- function(norm_count_df, 
@@ -279,14 +282,12 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     
     cqn_int_assay_fc_formatted <- SummarizedExperiment::cbind(phenotype_id = rownames(assays(cqn_int_norm)[["qnorm"]]), assays(cqn_int_norm)[["qnorm"]])
     
-    # gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_cqn_int_norm.tsv.gz")), "w")
-    # write.table(x = cqn_int_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    # close(gzfile)
-    
     message("## Normalised gene count matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se, ".gene_counts_cqn_int_norm.tsv.gz")))
     
     message("## Caclulate median TPM in each biological context ##")
     median_tpm_df = eQTLUtils::estimateMedianTPM(cqn_norm, subset_by = "qtl_group", assay_name = "cqn", prob = 0.5)
+    write_df_to_tsv_gz(df = median_tpm_df, 
+                       file_dir = file.path(output_dir, "qtl_group_median_tpms", paste0(study_name, "_ge_", qtl_group_in_se, "_median_tpm.tsv.gz")))
     merged_median_tpm_df <- merged_median_tpm_df %>% base::rbind(median_tpm_df)
     
     message("## Caclulate 95% quantile TPM in each biological context ##")
@@ -309,9 +310,6 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     
     write_df_to_tsv_gz(df = normalised_gene_counts_qtl_group, 
                        file_dir = file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, ".", qtl_group_in_se, "_anonym.tsv.gz")))
-    # gzfile = gzfile(file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, ".", qtl_group_in_se, "_anonym.tsv.gz")), "w")
-    # write.table(x = normalised_gene_counts_qtl_group, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    # close(gzfile)
     
     sample_metadata_anonym_path = file.path(output_dir, "qtl_group_split_norm_anonym", paste0(study_name, "_anonym.tsv"))
     sample_metadata_anonym <- anonym_sample_names_df %>% 
@@ -332,9 +330,6 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     
     write_df_to_tsv_gz(df = cqn_int_assay_fc_formatted, 
                        file_dir = file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv.gz")))
-    # gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv.gz")), "w")
-    # write.table(x = cqn_int_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    # close(gzfile)
 
     message("## Normalised exon count matrix exported into: ", output_dir, "/norm_not_filtered/", study_name, ".", qtl_group_in_se ,".exon_counts_cqn_int_norm.tsv.gz")
     
@@ -358,9 +353,6 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     
     write_df_to_tsv_gz(df = qnorm_assay_fc_formatted, 
                        file_dir = file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")))
-    # gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")), "w")
-    # write.table(x = qnorm_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    # close(gzfile)
 
     message("## Normalised transcript usage matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")))
     
@@ -384,9 +376,6 @@ for (qtl_group_in_se in qtl_groups_in_se) {
     
     write_se_as_tsv_gz(se = q_norm, assay_name = "qnorm", 
                        file_dir = file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")))
-    # gzfile = gzfile(file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")), "w")
-    # write.table(x = qnorm_assay_fc_formatted, file = gzfile, sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
-    # close(gzfile)
     
     message("## Normalised transcript usage matrix exported into: ", file.path(output_dir, "norm_not_filtered", paste0(study_name, ".", qtl_group_in_se , "." , quant_method, "_qnorm.tsv.gz")))
     
