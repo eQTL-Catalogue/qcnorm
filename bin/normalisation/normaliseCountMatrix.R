@@ -41,14 +41,15 @@ suppressPackageStartupMessages(library("data.table"))
 if (FALSE) {
   opt = list()
   opt$n = "GTEx"
-  opt$c="/Users/kerimov/Work/temp_files/leafcutter_norm_temp/leafcutter_perind_numers.counts.formatted.gz"
-  opt$s="/Users/kerimov/Work/temp_files/leafcutter_norm_temp/GTEx.tsv"
-  opt$p="/Users/kerimov/Work/temp_files/leafcutter_norm_temp/leafcutter_metadata.txt.gz"
-  opt$q="leafcutter"
+  opt$c="testdata/merged_gene_counts.tsv.gz"
+  opt$s="testdata/PISA_metadata.tsv"
+  opt$p="testdata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz"
+  opt$q="gene_counts"
   opt$o="."
-  opt$t="/Users/kerimov/Work/temp_files/leafcutter_norm_temp/GTEx_95quantile_tpm.tsv.gz"
-  opt$keep_XY=TRUE
+  opt$t=NULL
+  opt$keep_XY=TRUEz
   opt$filter_qc=TRUE
+  opt$eqtlutils = "../eQTLUtils/"
 }
 
 count_matrix_path = opt$c
@@ -91,6 +92,20 @@ message("## Reading sample metadata ##")
 sample_metadata <- utils::read.csv(sample_meta_path, sep = '\t', stringsAsFactors = FALSE)
 assertthat::has_name(sample_metadata, "sample_id")
 assertthat::has_name(sample_metadata, "genotype_id")
+assertthat::has_name(sample_metadata, "qtl_group")
+assertthat::has_name(sample_metadata, "rna_qc_passed")
+assertthat::has_name(sample_metadata, "genotype_qc_passed")
+assertthat::has_name(sample_metadata, "study")
+
+#Required columns for anonymous metadata
+assertthat::has_name(sample_metadata, "sex")
+assertthat::has_name(sample_metadata, "cell_type")
+assertthat::has_name(sample_metadata, "condition")
+assertthat::has_name(sample_metadata, "timepoint")
+assertthat::has_name(sample_metadata, "read_length")
+assertthat::has_name(sample_metadata, "stranded")
+assertthat::has_name(sample_metadata, "paired")
+assertthat::has_name(sample_metadata, "protocol")
 
 # # Check if all genotype_ids start with a letter and not a number or special character
 # assertthat::assert_that(all(stringr::str_detect(sample_metadata$genotype_id, "^[:alpha:]"), na.rm = TRUE),
