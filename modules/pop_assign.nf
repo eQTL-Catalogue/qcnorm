@@ -78,8 +78,6 @@ process getSNPsFromRef{
 
 // convert vcf file to plink binary file (.bed)
 process sampleVCftoBED{
-    publishDir "${params.outdir}/${params.study_name}/pop_assign", mode: 'copy'
-    
     input:
     path 'sample.vcf.gz'
 
@@ -222,6 +220,7 @@ process plotPCA{
     path 'plots/*'
     path 'populations.tsv'
     path 'projections_comb.tsv', emit: pop_assign_projections_ch
+    path "pop_assigned_abs_*"
 
     script:
     """

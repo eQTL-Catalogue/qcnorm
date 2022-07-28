@@ -34,8 +34,12 @@ process normalise_microarray{
 }
 
 process normalise_RNAseq_ge{
-    publishDir "${params.publishDir}/ge", mode: 'copy',
-        saveAs: {filename -> filename.indexOf("_tpm.tsv.gz") > 0 ? "../$filename" : "$filename"}
+    publishDir "${params.publishDir}/ge", mode: 'copy', pattern: "norm_not_filtered/*"
+    publishDir "${params.publishDir}/ge", mode: 'copy', pattern: "qtl_group_split_norm/*"
+    publishDir "${params.publishDir}/ge", mode: 'copy', pattern: "qtl_group_split_norm_anonym/*"
+    publishDir "${params.publishDir}/ge", mode: 'copy', pattern: "per_million_normalised/*"
+    publishDir "${params.publishDir}/ge", mode: 'copy', pattern: "qtl_group_median_tpms/*"
+    publishDir "${params.publishDir}/", mode: 'copy', pattern: "*_tpm.tsv.gz"    
 
     container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
     
@@ -49,6 +53,9 @@ process normalise_RNAseq_ge{
     path "*_95quantile_tpm.tsv.gz", emit: quantile_tpm_file
     path "*_median_tpm.tsv.gz", emit: median_tpm_file
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    path "qtl_group_split_norm_anonym/*"
+    path "per_million_normalised/*"
+    path "qtl_group_median_tpms/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -82,6 +89,7 @@ process normalise_RNAseq_exon{
     output:
     path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -116,6 +124,7 @@ process normalise_RNAseq_tx{
     output:
     path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -150,6 +159,7 @@ process normalise_RNAseq_txrev{
     output:
     path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""
@@ -187,6 +197,7 @@ process normalise_RNAseq_leafcutter{
     path "norm_not_filtered/*"
     path "qtl_group_split_norm/*", emit: qtlmap_tsv_input_ch
     path "leafcutter_metadata.txt.gz"
+    path "per_million_normalised/*"
 
     script:
     filter_qc = params.norm_filter_qc ? "--filter_qc TRUE" : ""

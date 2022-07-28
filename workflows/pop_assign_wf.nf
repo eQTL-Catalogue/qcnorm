@@ -3,27 +3,6 @@ nextflow.enable.dsl=2
 
 params.num_pc = params.num_pc == null ? 3 : params.num_pc
 
-Channel
-    .fromPath(params.vcf_file)
-    .ifEmpty { exit 1, "Samples genotype vcf not found: ${params.vcf_file}" } 
-    .set { vcf_file_ch }
-
-Channel
-    .fromPath(params.ref_genome)
-    .ifEmpty { exit 1, "Reference genotype vcf not found: ${params.ref_genome}" } 
-    .set { ref_genome_ch }
-
-Channel
-    .fromPath(params.populations_file)
-    .ifEmpty { exit 1, "Populations metadata file not found: ${params.populations_file}" } 
-    .set { populations_file_ch }
-
-if(params.exclude_population){
-    Channel
-        .fromPath(params.ids_to_remove_file)
-        .ifEmpty { exit 1, "Populations metadata file not found: ${params.ids_to_remove_file}" } 
-        .set { ids_to_remove_file_ch }
-}
 
 include { refVCFtoBED; removeFamilyFromRef; removeDublFromRef; getSNPsFromRef; sampleVCftoBED; calculateRelatednessMatrix; extractSharedSNPsFromSampleGen; extractSharedSNPsFromRefGen; calcKinsMatrices; calcRefPcaAndLoads; mapSampleGenToRef; plotPCA} from '../modules/pop_assign'
 
@@ -34,6 +13,29 @@ workflow {
 }
     
 workflow pop_assign {
+
+    Channel
+        .fromPath(params.vcf_file)
+        .ifEmpty { exit 1, "Samples genotype vcf not found: ${params.vcf_file}" } 
+        .set { vcf_file_ch }
+
+    Channel
+        .fromPath(params.ref_genome)
+        .ifEmpty { exit 1, "Reference genotype vcf not found: ${params.ref_genome}" } 
+        .set { ref_genome_ch }
+
+    Channel
+        .fromPath(params.populations_file)
+        .ifEmpty { exit 1, "Populations metadata file not found: ${params.populations_file}" } 
+        .set { populations_file_ch }
+
+    if(params.exclude_population){
+        Channel
+            .fromPath(params.ids_to_remove_file)
+            .ifEmpty { exit 1, "Populations metadata file not found: ${params.ids_to_remove_file}" } 
+            .set { ids_to_remove_file_ch }
+    }
+
     main:
         refVCFtoBED(ref_genome_ch)
         refBedNoDubl = params.exclude_population ? 

@@ -12,6 +12,9 @@ projections = if (is.na(args[2])) 'new_dataset_scores.profile.adj' else args[2]
 source_populations_file = if (is.na(args[3])) "samples_data.tsv" else args[3]
 data_name = if (is.na(args[4])) 'New_dataset' else args[4] 
 output_dir = if (is.na(args[5])) 'plots' else args[5] 
+distance_method = if (is.na(args[6])) "euclidean" else args[6] 
+admixed_abs_threshold = if (is.na(args[7])) 0.02 else args[7] 
+admixed_rel_threshold = if (is.na(args[8])) 1.7 else args[8] 
 
 save_ggplots <- function(plot, path = "plots", filename = "unnamed_plot", height = 15, width = 25){
   if (!dir.exists(path)){
@@ -49,8 +52,9 @@ ref_pca_plot <- ggplot(main_pca, aes(x=PC1, y=PC2, color=as.factor(superpopulati
 save_ggplots(plot = ref_pca_plot, filename = "ref_pca")
 
 projections_pcs <- read.table(projections, header = TRUE)
-projections_pcs <- projections_pcs %>% select(-c(2,3,4)) %>% 
-  rename(genotype_id=ID1, PC1=Adjusted1, PC2=Adjusted2, PC3=Adjusted3) %>% 
+projections_pcs <- projections_pcs %>% 
+  dplyr::select(ID2, Adjusted1, Adjusted2, Adjusted3)  %>% 
+  rename(genotype_id=ID2, PC1=Adjusted1, PC2=Adjusted2, PC3=Adjusted3) %>% 
   mutate(superpopulation_code = data_name)
 
 projections_only_plot <- ggplot(projections_pcs, aes(x=PC1, y=PC2)) + geom_point()+ coord_fixed()
@@ -122,3 +126,91 @@ save_ggplots(plot = knn_plot, filename = "knn_threshold")
 ###################################################
 finalData <- new_populations %>% mutate(knn_pop_threshold = new_populations_threshold$knn_pop)
 write.table(finalData, file='populations.tsv', quote = FALSE, row.names = FALSE, sep = '\t')
+
+
+############################################################
+# Assign populations with relative and absolute thresholds #
+############################################################
+generate_distance_matrix <- function(reference_pca_df, pca_df, n_pcs = 3, method = "euclidean"){
+  # required fields assertion ====
+  assertthat::assert_that(hasName(pca_df, "genotype_id"), msg = "Column genotype_id is missing in pca_df")
+  assertthat::assert_that(hasName(pca_df, "superpopulation_code"), msg = "Column superpopulation_code is missing in pca_df")
+  pcs <- c()
+  for (i in 1:n_pcs) {
+    pc_num <- paste0("PC",i)
+    assertthat::assert_that(hasName(pca_df, pc_num), msg = paste0("Column ", pc_num, " is missing in pca_df"))
+    pcs <- c(pcs, pc_num)
+  }
+  
+  assertthat::assert_that(hasName(reference_pca_df, "genotype_id"), msg = "Column genotype_id is missing in reference_pca_df")
+  assertthat::assert_that(hasName(reference_pca_df, "superpopulation_code"), msg = "Column superpopulation_code is missing in reference_pca_df")
+  for (i in 1:n_pcs) {
+    pc_num <- paste0("PC",i)
+    assertthat::assert_that(hasName(reference_pca_df, pc_num), msg = paste0("Column ", pc_num, " is missing in reference_pca_df"))
+  }
+  # ====
+  
+  sample_size <- pca_df %>% nrow()
+  reference_pca_df$genotype_id <- paste0("ref_", reference_pca_df$genotype_id)
+  comb_pcs = rbind(pca_df, reference_pca_df)
+  rownames(comb_pcs) <- comb_pcs$genotype_id
+  distance_matrix <- dist(comb_pcs[pcs], method = method) %>% as.matrix(labels = TRUE)
+  distance_matrix <- distance_matrix[-c(1:sample_size), 1:sample_size] 
+  tibble_ind <- distance_matrix %>% as_tibble(rownames="genotype_id")
+  tibble_ind <- reference_pca_df[,c("genotype_id","superpopulation_code")] %>% left_join(tibble_ind)
+  
+  mean_ind_diff_summary <- tibble_ind[,-1] %>% group_by(superpopulation_code) %>% summarize_all("mean")
+  return(mean_ind_diff_summary)
+}
+
+assign_populations <- function(distance_matrix, abs_threshold = 0.02, rel_threshold = 1.7){
+  assigned <- distance_matrix[,-1] %>% 
+    rbind(if_else(apply(distance_matrix[,-1], 2, min)<abs_threshold, 
+                  as.character(distance_matrix$superpopulation_code[apply(distance_matrix[,-1], 2, which.min)]), 
+                  "Admixed")) %>% as.data.frame()
+  rownames(assigned) <- c(as.character(distance_matrix$superpopulation_code), "pop_assign_abs_thresh")
+  assigned <- assigned %>% t() %>% as.data.frame() 
+  assigned <- cbind(genotype_id=rownames(assigned), assigned)
+
+  # find if there are admixed samples
+  mins <- apply(distance_matrix[,-1], 2, sort) %>% t() %>% as.data.frame() 
+  mins <- mins %>% mutate(isAdmixed = mins[,1]*rel_threshold > mins[,2])
+  # set assigned_population as minimum distance population first
+  assigned_rel <- distance_matrix[,-1] %>% rbind(as.character(distance_matrix$superpopulation_code[apply(distance_matrix[,-1], 2, which.min)])) %>% as.data.frame()
+  rownames(assigned_rel) <- c(as.character(distance_matrix$superpopulation_code), "pop_assign_rel_thresh")
+  assigned_rel <- assigned_rel %>% t() %>% as.data.frame()
+  
+  # if there are admixed samples according to proportional threshold replace assigned_rel population value
+  if (sum(mins$isAdmixed)>0) {
+    levels(assigned_rel$pop_assign_rel_thresh) <- c(levels(assigned_rel$pop_assign_rel_thresh), "Admixed")
+    assigned_rel$pop_assign_rel_thresh[mins$isAdmixed] <- "Admixed"
+  }
+  assigned_rel <- cbind(genotype_id=rownames(assigned_rel), assigned_rel)
+
+  return(left_join(assigned, assigned_rel[,c("genotype_id", "pop_assign_rel_thresh")]))
+}
+
+# projections_pcs <- projections_pcs %>% 
+#   dplyr::mutate(genotype_id = as.character(seq(from = 1, to = nrow(projections_pcs))))
+distance_matrix <- generate_distance_matrix(reference_pca_df = main_pca, pca_df = projections_pcs, method = distance_method, n_pcs = 3)
+
+assigned_populations <- assign_populations(distance_matrix, abs_threshold = admixed_abs_threshold, rel_threshold = admixed_rel_threshold)
+filename <- paste0("pop_assigned_abs_", admixed_abs_threshold, "_rel_", admixed_rel_threshold, ".tsv")
+write.table(assigned_populations, file=filename, quote = FALSE, row.names = FALSE, sep = '\t', col.names = TRUE)
+
+assigned_with_pcs <- projections_pcs %>% select(-c("superpopulation_code")) %>% left_join(assigned_populations[c("genotype_id","pop_assign_abs_thresh")])
+colnames(assigned_with_pcs)[which(colnames(assigned_with_pcs)=="pop_assign_abs_thresh")] <- "superpopulation_code"
+assigned_populations_abs_tresh <- ggplot(assigned_with_pcs, aes(x=PC1, y=PC2, color=superpopulation_code)) + 
+  geom_point() + 
+  geom_point(data=main_pca, alpha = 0.1, shape=4) + 
+  guides(color = guide_legend(title='Assigned population\n(abs threshold)')) + ggtitle(data_name) + coord_fixed() 
+ggsave(filename = paste0(data_name, "_pop_assign_abs_treshold_", admixed_abs_threshold, ".pdf"), plot = assigned_populations_abs_tresh, path = "plots", device = "pdf")
+
+assigned_with_pcs <- projections_pcs %>% select(-c("superpopulation_code")) %>% left_join(assigned_populations[c("genotype_id","pop_assign_rel_thresh")])
+colnames(assigned_with_pcs)[which(colnames(assigned_with_pcs)=="pop_assign_rel_thresh")] <- "superpopulation_code"
+assigned_populations_rel_tresh <- ggplot(assigned_with_pcs, aes(x=PC1, y=PC2, color=superpopulation_code)) + 
+  geom_point() + 
+  geom_point(data=main_pca, alpha = 0.1, shape=4) + 
+  guides(color = guide_legend(title='Assigned population\n(rel threshold)')) + ggtitle(data_name) + coord_fixed() 
+ggsave(filename = paste0(data_name,"_pop_assign_rel_treshold_", admixed_rel_threshold, ".pdf"), plot = assigned_populations_rel_tresh, path = "plots", device = "pdf")
+
