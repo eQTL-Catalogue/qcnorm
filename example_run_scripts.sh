@@ -78,10 +78,10 @@ nextflow run main.nf -profile tartu_hpc -resume\
  # Runs normalisation for microarray data using tsv input
  nextflow run main.nf -profile tartu_hpc -resume\
    -entry norm_only_with_tsv\
-   --input_tsv /gpfs/space/home/kerimov/qcnorm_fast/input_tsv_ma.tsv\
+   --input_tsv CEDAR_qcnorm_input.tsv\
    --is_microarray\
    --norm_keep_XY\
-   --outdir eQTL_Catalogue_r5_ma
+   --outdir CEDAR
 
 # Runs normalisation of only RNAseq with a specific count matrix, instead of quant_results_path
 # vcf_file is optional (can be skipped, but then qtlmap_inputs table will put "false" for vcf)
