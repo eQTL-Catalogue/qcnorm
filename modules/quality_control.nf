@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 process build_qc_report{
     publishDir "${params.outdir}/${params.study_name}/QC", mode: 'copy'
     
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     path script_path

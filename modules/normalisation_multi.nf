@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 process normalise_microarray{
     publishDir "${params.outdir}/$run_id/$study_name/normalised/microarray", mode: 'copy', pattern: "qtl_group_split_norm/*"
     
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata)
@@ -39,7 +39,7 @@ process normalise_RNAseq_ge{
     publishDir "${params.outdir}/$run_id/$study_name/normalised/ge", mode: 'copy', pattern: "qtl_group_median_tpms/*"
     publishDir "${params.outdir}/$run_id/$study_name/normalised/", mode: 'copy', pattern: "*_tpm.tsv.gz"
 
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata)
@@ -76,7 +76,7 @@ process normalise_RNAseq_ge{
 process normalise_RNAseq_exon{
     publishDir "${params.outdir}/$run_id/$study_name/normalised/exon", mode: 'copy'
     
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file(tpm_quantile)
@@ -109,7 +109,7 @@ process normalise_RNAseq_exon{
 process normalise_RNAseq_tx{
     publishDir "${params.outdir}/$run_id/$study_name/normalised/tx", mode: 'copy'
     
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file(tpm_quantile)
@@ -142,7 +142,7 @@ process normalise_RNAseq_tx{
 process normalise_RNAseq_txrev{
     publishDir "${params.outdir}/$run_id/$study_name/normalised/txrev", mode: 'copy'
     
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file(tpm_quantile)
@@ -177,7 +177,7 @@ process normalise_RNAseq_leafcutter{
     publishDir "${params.outdir}/$run_id/$study_name/normalised/leafcutter", mode: 'copy'
     
     label 'process_medium'
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     tuple val(run_id), val(study_name), file(quant_results_path), file(sample_metadata), file(tpm_quantile)

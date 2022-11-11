@@ -47,7 +47,7 @@ if (FALSE) {
   opt$q="gene_counts"
   opt$o="."
   opt$t=NULL
-  opt$keep_XY=TRUEz
+  opt$keep_XY=TRUE
   opt$filter_qc=TRUE
   opt$eqtlutils = "../eQTLUtils/"
 }

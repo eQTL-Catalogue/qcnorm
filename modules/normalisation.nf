@@ -5,7 +5,7 @@ process normalise_microarray{
     publishDir "${params.publishDir}/microarray", mode: 'copy'
     
     label 'process_medium'
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     path count_matrix
@@ -41,7 +41,7 @@ process normalise_RNAseq_ge{
     publishDir "${params.publishDir}/ge", mode: 'copy', pattern: "qtl_group_median_tpms/*"
     publishDir "${params.publishDir}/", mode: 'copy', pattern: "*_tpm.tsv.gz"    
 
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     path count_matrix
@@ -78,7 +78,7 @@ process normalise_RNAseq_ge{
 process normalise_RNAseq_exon{
     publishDir "${params.publishDir}/exon", mode: 'copy'
     
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     path count_matrix
@@ -113,7 +113,7 @@ process normalise_RNAseq_exon{
 process normalise_RNAseq_tx{
     publishDir "${params.publishDir}/tx", mode: 'copy'
     
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     path count_matrix
@@ -148,7 +148,7 @@ process normalise_RNAseq_tx{
 process normalise_RNAseq_txrev{
     publishDir "${params.publishDir}/txrev", mode: 'copy'
     
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     path count_matrix
@@ -184,7 +184,7 @@ process normalise_RNAseq_leafcutter{
     publishDir "${params.publishDir}/leafcutter", mode: 'copy'
     
     label 'process_medium'
-    container = 'quay.io/eqtlcatalogue/eqtlutils:v20.04.1'
+    container = 'quay.io/eqtlcatalogue/eqtlutils:v22.11.1'
     
     input:
     path count_matrix
