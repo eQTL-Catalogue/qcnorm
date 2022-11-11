@@ -89,7 +89,7 @@ message("Number of samples in study after quality control: ", sample_metadata[sa
 Performs principal component analysis (PCA) of gene expression data
 
 ```{r pca_res, echo=FALSE}
-valid_gene_types = c("lincRNA","protein_coding","IG_C_gene","IG_D_gene","IG_J_gene",
+valid_gene_types = c("lincRNA","lncRNA","protein_coding","IG_C_gene","IG_D_gene","IG_J_gene",
                        "IG_V_gene", "TR_C_gene","TR_D_gene","TR_J_gene", "TR_V_gene",
                        "3prime_overlapping_ncrna","known_ncrna", "processed_transcript",
                        "antisense","sense_intronic","sense_overlapping")
